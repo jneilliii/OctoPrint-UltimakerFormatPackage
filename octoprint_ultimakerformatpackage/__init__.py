@@ -32,7 +32,6 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 
 	def on_event(self, event, payload):
 		if event == "FileAdded" and "ufp" in payload["type"]:
-			self._logger.info(payload["path"])
 			# Add ufp file to analysisqueue
 			old_name = self._settings.global_get_basefolder("uploads") + "/" + payload["path"]
 			new_name = old_name + ".gcode"
@@ -43,6 +42,14 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			else:
 				entry = QueueEntry(payload["name"] + ".gcode",payload["path"] + ".gcode","gcode",payload["storage"],new_name, printer_profile)
 			self._analysis_queue.enqueue(entry,high_priority=True) 
+		if event == "FileRemoved" and payload["name"].endswith(".ufp.gcode"):
+			thumbnail = "%s/%s" % (self.get_plugin_data_folder(), payload["name"].replace(".ufp.gcode", ".png"))
+			ufp_file = "%s/%s" % (self.get_plugin_data_folder(), payload["name"].replace(".ufp.gcode", ".ufp"))
+			if os.path.exists(thumbnail):
+				os.remove(thumbnail)
+			if os.path.exists(ufp_file):
+				os.remove(ufp_file)
+
 	##-- UFP upload extenstion tree hook
 	def get_extension_tree(self, *args, **kwargs):
 		return dict(
