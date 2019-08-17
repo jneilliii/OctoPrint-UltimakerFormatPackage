@@ -1,0 +1,4 @@
+include README.md
+recursive-include octoprint_UltimakerFormatPackage/templates *
+recursive-include octoprint_UltimakerFormatPackage/translations *
+recursive-include octoprint_UltimakerFormatPackage/static *
