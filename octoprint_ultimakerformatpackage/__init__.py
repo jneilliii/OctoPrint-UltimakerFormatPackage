@@ -5,10 +5,13 @@ import octoprint.plugin
 import octoprint.filemanager.util
 import os
 from zipfile import ZipFile
+from octoprint.util import version
+from octoprint.filemanager.analysis import QueueEntry
 
 class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
-                                   octoprint.plugin.AssetPlugin,
-                                   octoprint.plugin.TemplatePlugin):
+								   octoprint.plugin.AssetPlugin,
+								   octoprint.plugin.TemplatePlugin,
+								   octoprint.plugin.EventHandlerPlugin):
 
 	##~~ SettingsPlugin mixin
 
@@ -20,13 +23,26 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 	##~~ AssetPlugin mixin
 
 	def get_assets(self):
-		# Define your plugin's asset files to automatically include in the
-		# core UI here.
 		return dict(
 			js=["js/UltimakerFormatPackage.js"],
 			css=["css/UltimakerFormatPackage.css"]
 		)
 
+	##~~ EventHandlerPlugin mixin
+
+	def on_event(self, event, payload):
+		if event == "FileAdded" and "ufp" in payload["type"]:
+			self._logger.info(payload["path"])
+			# Add ufp file to analysisqueue
+			old_name = self._settings.global_get_basefolder("uploads") + "/" + payload["path"]
+			new_name = old_name + ".gcode"
+			os.rename(old_name, new_name)
+			printer_profile = self._printer_profile_manager.get("_default")
+			if version.get_octoprint_version() > version.get_comparable_version("1.3.9"):
+				entry = QueueEntry(payload["name"] + ".gcode",payload["path"] + ".gcode","gcode",payload["storage"],new_name, printer_profile, None)
+			else:
+				entry = QueueEntry(payload["name"] + ".gcode",payload["path"] + ".gcode","gcode",payload["storage"],new_name, printer_profile)
+			self._analysis_queue.enqueue(entry,high_priority=True) 
 	##-- UFP upload extenstion tree hook
 	def get_extension_tree(self, *args, **kwargs):
 		return dict(
@@ -55,7 +71,7 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		from octoprint.util import is_hidden_path
 		return [
 				(r"/(.*)", LargeResponseHandler, dict(path=self.get_plugin_data_folder(),
-																as_attachment=True,
+																as_attachment=False,
 																path_validation=path_validation_factory(lambda path: not is_hidden_path(path),status_code=404)))
 				]
 
