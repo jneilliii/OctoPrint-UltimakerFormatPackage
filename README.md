@@ -1,6 +1,6 @@
 # OctoPrint-UltimakerFormatPackage
 
-**TODO:** Describe what your plugin does.
+This plugin adds support for Ultimaker Format Package (.ufp) files. Ultimaker Format Package files are based on Open Packaging Conventions (OPC) and contain compressed gcode and a preview thumbnail. The preview thumbnail can be shown in OctoPrint from the files list.
 
 ## Setup
 
@@ -8,10 +8,3 @@ Install via the bundled [Plugin Manager](https://github.com/foosel/OctoPrint/wik
 or manually using this URL:
 
     https://github.com/jneilliii/OctoPrint-UltimakerFormatPackage/archive/master.zip
-
-**TODO:** Describe how to install your plugin, if more needs to be done than just installing it via pip or through
-the plugin manager.
-
-## Configuration
-
-**TODO:** Describe your plugin's configuration options (if any).
