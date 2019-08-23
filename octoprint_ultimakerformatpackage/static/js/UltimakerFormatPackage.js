@@ -15,7 +15,6 @@ $(function() {
 		self.filesViewModel.open_thumbnail = function(data) {
 			if(data.name.indexOf('.ufp.gcode') > 0){
 				var thumbnail_url = '/plugin/UltimakerFormatPackage/' + data.name.replace('.ufp.gcode','.png');
-				console.log(thumbnail_url);
 				self.current_file(thumbnail_url);
 				$('div#thumbnail_viewer').modal("show");
 			}
