@@ -8,7 +8,7 @@ $(function() {
 	function UltimakerformatpackageViewModel(parameters) {
 		var self = this;
 		self.thumbnail_url = ko.observable('/static/img/tentacle-20x20.png');
-		self,thumbnail_title = ko.observable('');
+		self.thumbnail_title = ko.observable('');
 
 		self.settingsViewModel = parameters[0];
 		self.filesViewModel = parameters[1];
