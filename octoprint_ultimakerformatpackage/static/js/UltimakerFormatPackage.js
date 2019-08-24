@@ -7,16 +7,18 @@
 $(function() {
 	function UltimakerformatpackageViewModel(parameters) {
 		var self = this;
-		self.current_file = ko.observable('/static/img/tentacle-20x20.png');
+		self.thumbnail_url = ko.observable('/static/img/tentacle-20x20.png');
+		self.thumbnail_title = ko.observable('');
 
 		self.settingsViewModel = parameters[0];
 		self.filesViewModel = parameters[1];
 
 		self.filesViewModel.open_thumbnail = function(data) {
 			if(data.name.indexOf('.ufp.gcode') > 0){
+				var thumbnail_title = data.name.replace('.ufp.gcode','.ufp');
 				var thumbnail_url = '/plugin/UltimakerFormatPackage/' + data.name.replace('.ufp.gcode','.png');
-				console.log(thumbnail_url);
-				self.current_file(thumbnail_url);
+				self.thumbnail_url(thumbnail_url);
+				self.thumbnail_title(thumbnail_title);
 				$('div#thumbnail_viewer').modal("show");
 			}
 		}
