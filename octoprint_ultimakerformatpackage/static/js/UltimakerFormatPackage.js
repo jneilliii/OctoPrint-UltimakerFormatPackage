@@ -32,7 +32,8 @@ $(function() {
 			let template = '<div class="btn btn-mini" data-bind="click: function() { if ($root.loginState.isUser()) { $root.open_thumbnail($data) } else { return; } }, css: {hidden: name.indexOf(\'.ufp.gcode\') < 0}" title="Show Thumbnail"><i class="fa fa-image"></i></div>';
 
 			$("#files_template_machinecode").text(function () {
-				$(this).prepend('<div class="inline_thumbnail" data-bind="if: $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true"><img data-bind="visible: $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true,attr: {src: inline_thumbnail_url()}" width="100%" style="display: none;"/></div>');
+				//$(this).prepend('<div class="inline_thumbnail" data-bind="if: $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true"><img data-bind="visible: $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true,attr: {src: inline_thumbnail_url()}" width="100%" style="display: none;"/></div>');
+				$(this).prepend('<div class="row-fluid"><img data-bind="attr: {src: $root.inline_thumbnail_url($data)}" width="100%"/></div>');
 				return $(this).text().replace(regex, '<div class="btn-group action-buttons">$1	' + template + '></div>');
 			});
 		});
