@@ -23,11 +23,18 @@ $(function() {
 			}
 		}
 
+		self.filesViewModel.inline_thumbnail_url = function(data) {
+			return '/plugin/UltimakerFormatPackage/' + data.name.replace('.ufp.gcode','.png');
+		}
+
 		$(document).ready(function(){
 			let regex = /<div class="btn-group action-buttons">([\s\S]*)<.div>/mi;
 			let template = '<div class="btn btn-mini" data-bind="click: function() { if ($root.loginState.isUser()) { $root.open_thumbnail($data) } else { return; } }, css: {hidden: name.indexOf(\'.ufp.gcode\') < 0}" title="Show Thumbnail"><i class="fa fa-image"></i></div>';
 
 			$("#files_template_machinecode").text(function () {
+				if(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true) {
+					$(this).prepend('<div class="inline_thumbnail"><img data-bind="attr: {src: inline_thumbnail_url()}" width="100%"/></div>');
+				}
 				return $(this).text().replace(regex, '<div class="btn-group action-buttons">$1	' + template + '></div>');
 			});
 		});
