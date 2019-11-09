@@ -30,7 +30,7 @@ $(function() {
 		$(document).ready(function(){
 			let regex = /<div class="btn-group action-buttons">([\s\S]*)<.div>/mi;
 			let template = '<div class="btn btn-mini" data-bind="click: function() { if ($root.loginState.isUser()) { $root.open_thumbnail($data) } else { return; } }, visible: ($data.name.indexOf(\'.ufp.gcode\') > -1 && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == false)" title="Show Thumbnail" style="display: none;"><i class="fa fa-image"></i></div>';
-			let inline_thumbnail_template = '<div class="row-fluid" data-bind="if: ($data.name.indexOf(\'.ufp.gcode\') > -1 && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true)"><img data-bind="attr: {src: $root.inline_thumbnail_url($data)}, visible: ($data.name.indexOf(\'.ufp.gcode\') > -1 && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true), click: function() { if ($root.loginState.isUser()) { $root.open_thumbnail($data) } else { return; } }" width="100%" style="display: none;"/></div>'
+			let inline_thumbnail_template = '<div class="row-fluid inline_thumbnail" data-bind="if: ($data.name.indexOf(\'.ufp.gcode\') > -1 && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true)"><img data-bind="attr: {src: $root.inline_thumbnail_url($data)}, visible: ($data.name.indexOf(\'.ufp.gcode\') > -1 && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true), click: function() { if ($root.loginState.isUser()) { $root.open_thumbnail($data) } else { return; } }" width="100%" style="display: none;"/></div>'
 
 			$("#files_template_machinecode").text(function () {
 				var return_value = '';
