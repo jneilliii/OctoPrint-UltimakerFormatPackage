@@ -28,8 +28,11 @@ $(function() {
 			return '/plugin/UltimakerFormatPackage/' + data.name.replace('.ufp.gcode','.png');
 		}
 
-		//$(document).ready(function(){
 		self.onBeforeBinding = function() {
+			console.log(self.settingsViewModel);
+		}
+
+		$(document).ready(function(){
 			self.inline_thumbnail(self.settingsViewModel.plugins.UltimakerFormatPackage.inline_thumbnail());
 			let regex = /<div class="btn-group action-buttons">([\s\S]*)<.div>/mi;
 			let template = '<div class="btn btn-mini" data-bind="click: function() { if ($root.loginState.isUser()) { $root.open_thumbnail($data) } else { return; } }, css: {hidden: name.indexOf(\'.ufp.gcode\') < 0}" title="Show Thumbnail"><i class="fa fa-image"></i></div>';
@@ -44,7 +47,7 @@ $(function() {
 				}
 				return return_value
 			});
-		}//);
+		});
 	}
 
 	OCTOPRINT_VIEWMODELS.push({
