@@ -29,10 +29,6 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			css=["css/UltimakerFormatPackage.css"]
 		)
 
-	##-- Template hooks
-	def get_template_configs(self):
-		return [dict(type="settings",custom_bindings=True)]
-
 	##~~ EventHandlerPlugin mixin
 
 	def on_event(self, event, payload):
