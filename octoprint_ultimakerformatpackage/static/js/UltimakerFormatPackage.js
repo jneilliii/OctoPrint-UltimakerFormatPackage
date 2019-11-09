@@ -30,7 +30,7 @@ $(function() {
 		self.filesViewModel.inline_thumbnail = ko.observable(false);
 
 		self.onBeforeBinding = function() {
-			self.filesViewModel.inline_thumbnail(self.settingsViewModel.plugins.UltimakerFormatPackage.inline_thumbnail());
+			self.filesViewModel.inline_thumbnail(self.filesViewModel.settingsViewModel.plugins.UltimakerFormatPackage.inline_thumbnail());
 		}
 
 		$(document).ready(function(){
