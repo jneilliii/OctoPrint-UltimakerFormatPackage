@@ -78,7 +78,7 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		from octoprint.server.util.tornado import LargeResponseHandler, UrlProxyHandler, path_validation_factory
 		from octoprint.util import is_hidden_path
 		return [
-				(r"/(.*)", LargeResponseHandler, dict(path=self.get_plugin_data_folder(),
+				(r"thumbnail/(.*)", LargeResponseHandler, dict(path=self.get_plugin_data_folder(),
 																as_attachment=False,
 																path_validation=path_validation_factory(lambda path: not is_hidden_path(path),status_code=404)))
 				]

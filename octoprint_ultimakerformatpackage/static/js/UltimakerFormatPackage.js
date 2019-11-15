@@ -16,7 +16,7 @@ $(function() {
 		self.filesViewModel.open_thumbnail = function(data) {
 			if(data.name.indexOf('.ufp.gcode') > 0){
 				var thumbnail_title = data.name.replace('.ufp.gcode','.ufp');
-				var thumbnail_url = '/plugin/UltimakerFormatPackage/' + data.name.replace('.ufp.gcode','.png');
+				var thumbnail_url = '/plugin/UltimakerFormatPackage/thumbnail/' + data.name.replace('.ufp.gcode','.png');
 				self.thumbnail_url(thumbnail_url);
 				self.thumbnail_title(thumbnail_title);
 				$('div#thumbnail_viewer').modal("show");
@@ -24,7 +24,7 @@ $(function() {
 		}
 
 		self.filesViewModel.inline_thumbnail_url = function(data) {
-			return '/plugin/UltimakerFormatPackage/' + data.name.replace('.ufp.gcode','.png');
+			return '/plugin/UltimakerFormatPackage/thumbnail/' + data.name.replace('.ufp.gcode','.png');
 		}
 
 		$(document).ready(function(){
@@ -34,6 +34,7 @@ $(function() {
 
 			$("#files_template_machinecode").text(function () {
 				var return_value = '';
+				console.log(self);
 				//if(self.settingsViewModel.plugins.UltimakerFormatPackage.inline_thumbnail() == true){
 					return_value = inline_thumbnail_template + $(this).text();
 				//} else {
