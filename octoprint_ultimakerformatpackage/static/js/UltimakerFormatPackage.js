@@ -34,7 +34,7 @@ $(function() {
 
 			$("#files_template_machinecode").text(function () {
 				var return_value = '';
-				console.log(self);
+				console.log(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail);
 				//if(self.settingsViewModel.plugins.UltimakerFormatPackage.inline_thumbnail() == true){
 					return_value = inline_thumbnail_template + $(this).text();
 				//} else {
