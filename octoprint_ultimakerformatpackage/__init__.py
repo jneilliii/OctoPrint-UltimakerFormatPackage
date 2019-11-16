@@ -52,8 +52,8 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			self._analysis_queue.enqueue(entry,high_priority=True)
 		if event == "FileRemoved" and payload["name"].endswith(".ufp.gcode"):
 			self._logger.info(payload)
-			thumbnail = "%s/%s/%s" % (self.get_plugin_data_folder(), payload["path"], payload["name"].replace(".ufp.gcode", ".png"))
-			ufp_file = "%s/%s/%s" % (self.get_plugin_data_folder(), payload["path"], payload["name"].replace(".ufp.gcode", ".ufp"))
+			thumbnail = "%s/%s" % (self.get_plugin_data_folder(), payload["path"].replace(".ufp.gcode", ".png"))
+			ufp_file = "%s/%s" % (self.get_plugin_data_folder(), payload["path"].replace(".ufp.gcode", ".ufp"))
 			if os.path.exists(thumbnail):
 				os.remove(thumbnail)
 			if os.path.exists(ufp_file):
