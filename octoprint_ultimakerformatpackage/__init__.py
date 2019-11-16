@@ -71,6 +71,8 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		ufp_extensions = [".ufp"]
 		name, extension = os.path.splitext(file_object.filename)
 		if extension in ufp_extensions:
+			self._logger.info(path)
+			self._logger.info(file_object)
 			file_object.save(self.get_plugin_data_folder() + "/" + file_object.filename)
 			with ZipFile(self.get_plugin_data_folder() + "/" + file_object.filename,'r') as zipObj:
 				with open(self.get_plugin_data_folder() + "/" + name + ".png", 'wb') as thumbnail:
