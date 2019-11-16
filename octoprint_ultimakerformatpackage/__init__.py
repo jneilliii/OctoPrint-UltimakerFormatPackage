@@ -71,16 +71,16 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		ufp_extensions = [".ufp"]
 		name, extension = os.path.splitext(file_object.filename)
 		if extension in ufp_extensions:
-			self._logger.info(path)
-			if not os.path.exists(path):
-				os.makedirs(path)
-			file_object.save(self.get_plugin_data_folder() + "/" + path)
-			with ZipFile(self.get_plugin_data_folder() + "/" + path,'r') as zipObj:
-				with open(self.get_plugin_data_folder() + "/" + path.replace(".ufp",".png"), 'wb') as thumbnail:
+			save_filename = self.get_plugin_data_folder() + "/" + path
+			if not os.path.exists(save_filename):
+				os.makedirs(save_filename)
+			file_object.save(save_filename)
+			with ZipFile(save_filename,'r') as zipObj:
+				with open(save_filename.replace(".ufp",".png"), 'wb') as thumbnail:
 					thumbnail.write(zipObj.read("/Metadata/thumbnail.png"))
-				with open(self.get_plugin_data_folder() + "/" + path + ".gcode", 'wb') as f:
+				with open(save_filename + ".gcode", 'wb') as f:
 					f.write(zipObj.read("/3D/model.gcode"))
-				return octoprint.filemanager.util.DiskFileWrapper(path + ".gcode", self.get_plugin_data_folder() + "/" + path + ".gcode")
+				return octoprint.filemanager.util.DiskFileWrapper(path + ".gcode", save_filename + ".gcode")
 		return file_object
 
 	##~~ Routes hook
