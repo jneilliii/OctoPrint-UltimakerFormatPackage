@@ -29,6 +29,13 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			css=["css/UltimakerFormatPackage.css"]
 		)
 
+	##~~ TemplatePlugin mixin
+
+	def get_template_configs(self):
+		return [
+			dict(type="settings", custom_bindings=False, template="UltimakerFormatPackage_settings.jinja2"),
+		]
+
 	##~~ EventHandlerPlugin mixin
 
 	def on_event(self, event, payload):

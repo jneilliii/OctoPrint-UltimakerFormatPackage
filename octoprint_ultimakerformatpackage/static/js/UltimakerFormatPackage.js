@@ -9,6 +9,7 @@ $(function() {
 		var self = this;
 		self.thumbnail_url = ko.observable('/static/img/tentacle-20x20.png');
 		self.thumbnail_title = ko.observable('');
+		self.inline_thumbnail = ko.observable();
 
 		self.settingsViewModel = parameters[0];
 		self.filesViewModel = parameters[1];
@@ -33,13 +34,8 @@ $(function() {
 			let inline_thumbnail_template = '<div class="row-fluid inline_thumbnail" data-bind="if: ($data.name.indexOf(\'.ufp.gcode\') > -1 && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true)"><img data-bind="attr: {src: $root.inline_thumbnail_url($data)}, visible: ($data.name.indexOf(\'.ufp.gcode\') > -1 && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true), click: function() { if ($root.loginState.isUser()) { $root.open_thumbnail($data) } else { return; } }" width="100%" style="display: none;"/></div>'
 
 			$("#files_template_machinecode").text(function () {
-				var return_value = '';
-				console.log(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail);
-				//if(self.settingsViewModel.plugins.UltimakerFormatPackage.inline_thumbnail() == true){
-					return_value = inline_thumbnail_template + $(this).text();
-				//} else {
-					return_value = return_value.replace(regex, '<div class="btn-group action-buttons">$1	' + template + '></div>');
-				//}
+				var return_value = inline_thumbnail_template + $(this).text();
+				return_value = return_value.replace(regex, '<div class="btn-group action-buttons">$1	' + template + '></div>');
 				return return_value
 			});
 		});
