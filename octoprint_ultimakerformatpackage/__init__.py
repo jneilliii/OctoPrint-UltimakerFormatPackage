@@ -17,7 +17,8 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 
 	def get_settings_defaults(self):
 		return dict(
-			installed=True
+			installed=True,
+			inline_thumbnail=False
 		)
 
 	##~~ AssetPlugin mixin
@@ -27,6 +28,13 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			js=["js/UltimakerFormatPackage.js"],
 			css=["css/UltimakerFormatPackage.css"]
 		)
+
+	##~~ TemplatePlugin mixin
+
+	def get_template_configs(self):
+		return [
+			dict(type="settings", custom_bindings=False, template="UltimakerFormatPackage_settings.jinja2"),
+		]
 
 	##~~ EventHandlerPlugin mixin
 
@@ -43,8 +51,8 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 				entry = QueueEntry(payload["name"] + ".gcode",payload["path"] + ".gcode","gcode",payload["storage"],new_name, printer_profile)
 			self._analysis_queue.enqueue(entry,high_priority=True)
 		if event == "FileRemoved" and payload["name"].endswith(".ufp.gcode"):
-			thumbnail = "%s/%s" % (self.get_plugin_data_folder(), payload["name"].replace(".ufp.gcode", ".png"))
-			ufp_file = "%s/%s" % (self.get_plugin_data_folder(), payload["name"].replace(".ufp.gcode", ".ufp"))
+			thumbnail = "%s/%s" % (self.get_plugin_data_folder(), payload["path"].replace(".ufp.gcode", ".png"))
+			ufp_file = "%s/%s" % (self.get_plugin_data_folder(), payload["path"].replace(".ufp.gcode", ".ufp"))
 			if os.path.exists(thumbnail):
 				os.remove(thumbnail)
 			if os.path.exists(ufp_file):
@@ -63,13 +71,17 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		ufp_extensions = [".ufp"]
 		name, extension = os.path.splitext(file_object.filename)
 		if extension in ufp_extensions:
-			file_object.save(self.get_plugin_data_folder() + "/" + file_object.filename)
-			with ZipFile(self.get_plugin_data_folder() + "/" + file_object.filename,'r') as zipObj:
-				with open(self.get_plugin_data_folder() + "/" + name + ".png", 'wb') as thumbnail:
+			save_filename = self.get_plugin_data_folder() + "/" + path
+			save_filepath = os.path.dirname(save_filename)
+			if not os.path.exists(save_filepath):
+				os.makedirs(save_filepath)
+			file_object.save(save_filename)
+			with ZipFile(save_filename,'r') as zipObj:
+				with open(save_filename.replace(".ufp",".png"), 'wb') as thumbnail:
 					thumbnail.write(zipObj.read("/Metadata/thumbnail.png"))
-				with open(self.get_plugin_data_folder() + "/" + name + ".gcode", 'wb') as f:
+				with open(save_filename + ".gcode", 'wb') as f:
 					f.write(zipObj.read("/3D/model.gcode"))
-				return octoprint.filemanager.util.DiskFileWrapper(name + ".gcode", self.get_plugin_data_folder() + "/" + name + ".gcode")
+				return octoprint.filemanager.util.DiskFileWrapper(path + ".gcode", save_filename + ".gcode")
 		return file_object
 
 	##~~ Routes hook
@@ -77,7 +89,7 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		from octoprint.server.util.tornado import LargeResponseHandler, UrlProxyHandler, path_validation_factory
 		from octoprint.util import is_hidden_path
 		return [
-				(r"/(.*)", LargeResponseHandler, dict(path=self.get_plugin_data_folder(),
+				(r"thumbnail/(.*)", LargeResponseHandler, dict(path=self.get_plugin_data_folder(),
 																as_attachment=False,
 																path_validation=path_validation_factory(lambda path: not is_hidden_path(path),status_code=404)))
 				]
