@@ -72,7 +72,7 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		name, extension = os.path.splitext(file_object.filename)
 		if extension in ufp_extensions:
 			save_filename = self.get_plugin_data_folder() + "/" + path
-			save_filepath = save_filename.replace(file_object.filename,"")
+			save_filepath = os.path.dirname(save_filename)
 			if not os.path.exists(save_filepath):
 				os.makedirs(save_filepath)
 			file_object.save(save_filename)
