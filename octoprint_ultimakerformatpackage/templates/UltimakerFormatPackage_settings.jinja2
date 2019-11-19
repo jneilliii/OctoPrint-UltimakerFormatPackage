@@ -5,4 +5,15 @@
 		<input type="checkbox" data-bind="checked: settings.plugins.UltimakerFormatPackage.inline_thumbnail"> Use inline thumbnails.
 		</label>
 	</div>
+	<div class="controls">
+		<label class="checkbox">
+		<input type="checkbox" data-bind="enable:settings.plugins.UltimakerFormatPackage.inline_thumbnail, checked: settings.plugins.UltimakerFormatPackage.scale_inline_thumbnail"> Scale image.
+		</label>
+	</div>
+	<div class="controls">
+		<span class="input-append">
+			<input type="number" step="any" min="0" max="100" class="input-mini text-right" data-bind="enable:settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true && settings.plugins.UltimakerFormatPackage.scale_inline_thumbnail() == true, value: settings.plugins.UltimakerFormatPackage.inline_thumbnail_scale_value">
+			<span class="add-on">%</span>
+		</span>
+	</div>
 </div>
