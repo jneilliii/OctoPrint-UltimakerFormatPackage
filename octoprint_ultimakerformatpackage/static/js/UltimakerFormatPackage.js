@@ -62,10 +62,10 @@ $(function() {
 				if (newValue == false){
 					self.filesViewModel.thumbnailAlignValue(self.DEFAULT_THUMBNAIL_SCALE);
 				} else {
-					self.filesViewModel.thumbnailAlignValue(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail_scale_value());
+					self.filesViewModel.thumbnailAlignValue(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail_align_value());
 				}
 			});
-			self.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail_scale_value.subscribe(function(newValue){
+			self.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail_align_value.subscribe(function(newValue){
 				self.filesViewModel.thumbnailAlignValue(newValue);
 			});
 		}
