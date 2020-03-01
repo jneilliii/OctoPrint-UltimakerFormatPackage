@@ -45,6 +45,8 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			# Add ufp file to analysisqueue
 			old_name = self._settings.global_get_basefolder("uploads") + "/" + payload["path"]
 			new_name = old_name + ".gcode"
+			if os.path.exists(new_name):
+				os.remove(new_name)
 			os.rename(old_name, new_name)
 			printer_profile = self._printer_profile_manager.get("_default")
 			if version.get_octoprint_version() > version.get_comparable_version("1.3.9"):
@@ -52,7 +54,10 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			else:
 				entry = QueueEntry(payload["name"] + ".gcode",payload["path"] + ".gcode","gcode",payload["storage"],new_name, printer_profile)
 			self._analysis_queue.enqueue(entry,high_priority=True)
+		if event == "MetadataAnalysisFinished" and "ufp" in payload["path"]:
+			self._logger.info('Adding thumbnail url')
 			thumbnail_url = "/plugin/UltimakerFormatPackage/thumbnail/" + payload["path"].replace(".ufp.gcode", ".png")
+			self._storage_interface = self._file_manager._storage(payload.get("origin", "local"))
 			self._storage_interface.set_additional_metadata(payload.get("path"), "refs", dict(resource=thumbnail_url), merge=True)
 		if event == "FileRemoved" and payload["name"].endswith(".ufp.gcode"):
 			thumbnail = "%s/%s" % (self.get_plugin_data_folder(), payload["path"].replace(".ufp.gcode", ".png"))
