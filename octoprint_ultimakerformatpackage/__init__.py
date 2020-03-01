@@ -58,7 +58,7 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			self._logger.info('Adding thumbnail url')
 			thumbnail_url = "/plugin/UltimakerFormatPackage/thumbnail/" + payload["path"].replace(".ufp.gcode", ".png")
 			self._storage_interface = self._file_manager._storage(payload.get("origin", "local"))
-			self._storage_interface.set_additional_metadata(payload.get("path"), "refs", dict(resource=thumbnail_url), merge=True)
+			self._storage_interface.set_additional_metadata(payload.get("path"), "refs", dict(thumbnail=thumbnail_url), merge=True)
 		if event == "FileRemoved" and payload["name"].endswith(".ufp.gcode"):
 			thumbnail = "%s/%s" % (self.get_plugin_data_folder(), payload["path"].replace(".ufp.gcode", ".png"))
 			ufp_file = "%s/%s" % (self.get_plugin_data_folder(), payload["path"].replace(".ufp.gcode", ".ufp"))
