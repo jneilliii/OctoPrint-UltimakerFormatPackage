@@ -28,27 +28,47 @@ $(function() {
 			return '/plugin/UltimakerFormatPackage/thumbnail/' + data.path.replace('.ufp.gcode','.png');
 		}
 
-        self.DEFAULT_THUMBNAIL_SCALE = "100%"
-        self.filesViewModel.thumbnailScaleValue = ko.observable(self.DEFAULT_THUMBNAIL_SCALE)
+		self.DEFAULT_THUMBNAIL_SCALE = "100%"
+		self.filesViewModel.thumbnailScaleValue = ko.observable(self.DEFAULT_THUMBNAIL_SCALE)
 
-        self.onBeforeBinding = function() {
-            // assign initial scaling
-            if (self.settingsViewModel.settings.plugins.UltimakerFormatPackage.scale_inline_thumbnail()==true){
-                self.filesViewModel.thumbnailScaleValue(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail_scale_value() + "%");
-            }
+		self.DEFAULT_THUMBNAIL_ALIGN = "left"
+		self.filesViewModel.thumbnailAlignValue = ko.observable(self.DEFAULT_THUMBNAIL_ALIGN)
 
-            // observe scaling changes
-            self.settingsViewModel.settings.plugins.UltimakerFormatPackage.scale_inline_thumbnail.subscribe(function(newValue){
-                if (newValue == false){
-                    self.filesViewModel.thumbnailScaleValue(self.DEFAULT_THUMBNAIL_SCALE);
-                } else {
-                    self.filesViewModel.thumbnailScaleValue(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail_scale_value() + "%");
-                }
-            });
-            self.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail_scale_value.subscribe(function(newValue){
-                self.filesViewModel.thumbnailScaleValue(newValue + "%");
-            });
-        }
+		self.onBeforeBinding = function() {
+			// assign initial scaling
+			if (self.settingsViewModel.settings.plugins.UltimakerFormatPackage.scale_inline_thumbnail()==true){
+				self.filesViewModel.thumbnailScaleValue(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail_scale_value() + "%");
+			}
+
+			// assign initial alignment
+			if (self.settingsViewModel.settings.plugins.UltimakerFormatPackage.align_inline_thumbnail()==true){
+				self.filesViewModel.thumbnailAlignValue(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail_align_value());
+			}
+
+			// observe scaling changes
+			self.settingsViewModel.settings.plugins.UltimakerFormatPackage.scale_inline_thumbnail.subscribe(function(newValue){
+				if (newValue == false){
+					self.filesViewModel.thumbnailScaleValue(self.DEFAULT_THUMBNAIL_SCALE);
+				} else {
+					self.filesViewModel.thumbnailScaleValue(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail_scale_value() + "%");
+				}
+			});
+			self.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail_scale_value.subscribe(function(newValue){
+				self.filesViewModel.thumbnailScaleValue(newValue + "%");
+			});
+
+			// observe alignment changes
+			self.settingsViewModel.settings.plugins.UltimakerFormatPackage.align_inline_thumbnail.subscribe(function(newValue){
+				if (newValue == false){
+					self.filesViewModel.thumbnailAlignValue(self.DEFAULT_THUMBNAIL_SCALE);
+				} else {
+					self.filesViewModel.thumbnailAlignValue(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail_scale_value());
+				}
+			});
+			self.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail_scale_value.subscribe(function(newValue){
+				self.filesViewModel.thumbnailAlignValue(newValue);
+			});
+		}
 
 
 		$(document).ready(function(){
@@ -56,7 +76,7 @@ $(function() {
 			let template = '<div class="btn btn-mini" data-bind="click: function() { if ($root.loginState.isUser()) { $root.open_thumbnail($data) } else { return; } }, visible: ($data.name.indexOf(\'.ufp.gcode\') > -1 && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == false)" title="Show Thumbnail" style="display: none;"><i class="fa fa-image"></i></div>';
 			let inline_thumbnail_template = '<div class="row-fluid inline_thumbnail" ' +
 			                                'data-bind="if: ($data.name.indexOf(\'.ufp.gcode\') > -1 && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true)">' +
-			                                '<img data-bind="attr: {src: $root.inline_thumbnail_url($data), width: $root.thumbnailScaleValue}, ' +
+			                                '<img data-bind="attr: {src: $root.inline_thumbnail_url($data), width: $root.thumbnailScaleValue, align: $root.thumbnailAlignValue}, ' +
 			                                'visible: ($data.name.indexOf(\'.ufp.gcode\') > -1 && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true), ' +
 			                                'click: function() { if ($root.loginState.isUser()) { $root.open_thumbnail($data) } else { return; } }" ' +
 //			                                'width="100%" ' +
