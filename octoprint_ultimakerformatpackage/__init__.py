@@ -52,6 +52,8 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			else:
 				entry = QueueEntry(payload["name"] + ".gcode",payload["path"] + ".gcode","gcode",payload["storage"],new_name, printer_profile)
 			self._analysis_queue.enqueue(entry,high_priority=True)
+			thumbnail_url = "/plugin/UltimakerFormatPackage/thumbnail/" + payload["path"].replace(".ufp.gcode", ".png")
+			self._storage_interface.set_additional_metadata(payload.get("path"), "refs", dict(resource=thumbnail_url), merge=True)
 		if event == "FileRemoved" and payload["name"].endswith(".ufp.gcode"):
 			thumbnail = "%s/%s" % (self.get_plugin_data_folder(), payload["path"].replace(".ufp.gcode", ".png"))
 			ufp_file = "%s/%s" % (self.get_plugin_data_folder(), payload["path"].replace(".ufp.gcode", ".ufp"))
