@@ -47,6 +47,9 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			# Add ufp file to analysisqueue
 			old_name = self._settings.global_get_basefolder("uploads") + "/" + payload["path"]
 			new_name = old_name + ".gcode"
+			ufp_file = self.get_plugin_data_folder() + "/" + payload["path"]
+			if os.path.exists(ufp_file):
+				os.remove(ufp_file)
 			if os.path.exists(new_name):
 				os.remove(new_name)
 			os.rename(old_name, new_name)
@@ -64,10 +67,13 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		if event == "FileRemoved" and payload["name"].endswith(".ufp.gcode"):
 			thumbnail = "%s/%s" % (self.get_plugin_data_folder(), payload["path"].replace(".ufp.gcode", ".png"))
 			ufp_file = "%s/%s" % (self.get_plugin_data_folder(), payload["path"].replace(".ufp.gcode", ".ufp"))
+			gcode_file = "%s/%s" % (self.get_plugin_data_folder(), payload["path"])
 			if os.path.exists(thumbnail):
 				os.remove(thumbnail)
 			if os.path.exists(ufp_file):
 				os.remove(ufp_file)
+			if os.path.exists(gcode_file):
+				os.remove(gcode_file)
 
 	##-- UFP upload extenstion tree hook
 	def get_extension_tree(self, *args, **kwargs):
