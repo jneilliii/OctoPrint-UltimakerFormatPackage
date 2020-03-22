@@ -48,10 +48,13 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			old_name = self._settings.global_get_basefolder("uploads") + "/" + payload["path"]
 			new_name = old_name + ".gcode"
 			ufp_file = self.get_plugin_data_folder() + "/" + payload["path"]
+			gcode_file = ufp_file + ".gcode"
 			if os.path.exists(ufp_file):
 				os.remove(ufp_file)
 			if os.path.exists(new_name):
 				os.remove(new_name)
+			if os.path.exists(gcode_file):
+				os.remove(gcode_file)
 			os.rename(old_name, new_name)
 			printer_profile = self._printer_profile_manager.get("_default")
 			if version.get_octoprint_version() > version.get_comparable_version("1.3.9"):
