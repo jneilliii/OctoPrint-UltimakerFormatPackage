@@ -16,4 +16,12 @@
 			<span class="add-on">%</span>
 		</span>
 	</div>
+	<div class="controls">
+		<label class="checkbox">
+		<input type="checkbox" data-bind="enable:settings.plugins.UltimakerFormatPackage.inline_thumbnail, checked: settings.plugins.UltimakerFormatPackage.align_inline_thumbnail"> Align image.
+		</label>
+	</div>
+	<div class="controls">
+		<input type="text" class="input-small" data-bind="enable:settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true && settings.plugins.UltimakerFormatPackage.align_inline_thumbnail() == true, value: settings.plugins.UltimakerFormatPackage.inline_thumbnail_align_value">
+	</div>
 </div>

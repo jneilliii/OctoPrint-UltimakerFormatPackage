@@ -5,13 +5,20 @@ import octoprint.plugin
 import octoprint.filemanager.util
 import os
 from zipfile import ZipFile
-from octoprint.util import version
+from octoprint.util import version, RepeatedTimer
 from octoprint.filemanager.analysis import QueueEntry
 
 class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 								   octoprint.plugin.AssetPlugin,
 								   octoprint.plugin.TemplatePlugin,
 								   octoprint.plugin.EventHandlerPlugin):
+
+	def __init__(self):
+		self._fileRemovalTimer = None
+		self._fileRemovalLastDeleted = None
+		self._fileRemovalLastAdded = None
+		self._waitForAnalysis = False
+		self._analysis_active = False
 
 	##~~ SettingsPlugin mixin
 
@@ -21,6 +28,8 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			inline_thumbnail=False,
 			scale_inline_thumbnail=False,
 			inline_thumbnail_scale_value="50",
+			align_inline_thumbnail=False,
+			inline_thumbnail_align_value="left",
 		)
 
 	##~~ AssetPlugin mixin
@@ -45,8 +54,14 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			# Add ufp file to analysisqueue
 			old_name = self._settings.global_get_basefolder("uploads") + "/" + payload["path"]
 			new_name = old_name + ".gcode"
+			ufp_file = self.get_plugin_data_folder() + "/" + payload["path"]
+			gcode_file = ufp_file + ".gcode"
+			if os.path.exists(ufp_file):
+				os.remove(ufp_file)
 			if os.path.exists(new_name):
 				os.remove(new_name)
+			if os.path.exists(gcode_file):
+				os.remove(gcode_file)
 			os.rename(old_name, new_name)
 			printer_profile = self._printer_profile_manager.get("_default")
 			if version.get_octoprint_version() > version.get_comparable_version("1.3.9"):
@@ -54,18 +69,90 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			else:
 				entry = QueueEntry(payload["name"] + ".gcode",payload["path"] + ".gcode","gcode",payload["storage"],new_name, printer_profile)
 			self._analysis_queue.enqueue(entry,high_priority=True)
+		if event == "MetadataAnalysisStarted" and  "ufp" in payload["path"]:
+			self._analysis_active = True
 		if event == "MetadataAnalysisFinished" and "ufp" in payload["path"]:
-			self._logger.info('Adding thumbnail url')
+			self._logger.debug('Adding thumbnail url')
 			thumbnail_url = "/plugin/UltimakerFormatPackage/thumbnail/" + payload["path"].replace(".ufp.gcode", ".png")
 			self._storage_interface = self._file_manager._storage(payload.get("origin", "local"))
 			self._storage_interface.set_additional_metadata(payload.get("path"), "refs", dict(thumbnail=thumbnail_url), merge=True)
+			self._analysis_active = False
+		if event == "FileAdded" and payload["name"].endswith(".ufp.gcode"):
+			self._logger.debug("File added %s" % payload["name"])
+			self._fileRemovalLastAdded = payload
 		if event == "FileRemoved" and payload["name"].endswith(".ufp.gcode"):
-			thumbnail = "%s/%s" % (self.get_plugin_data_folder(), payload["path"].replace(".ufp.gcode", ".png"))
-			ufp_file = "%s/%s" % (self.get_plugin_data_folder(), payload["path"].replace(".ufp.gcode", ".ufp"))
+			self._logger.debug("File removed %s" % payload["name"])
+			self._fileRemovalLastDeleted = payload
+			self._fileRemovalTimer_start()
+
+	##~~ File Removal Timer
+
+	def _fileRemovalTimer_start(self):
+		if self._fileRemovalTimer is None:
+			self._logger.debug("Starting removal timer.")
+			self._fileRemovalTimer = RepeatedTimer(5, self._fileRemovalTimer_task)
+			self._fileRemovalTimer.start()
+
+	def _fileRemovalTimer_stop(self):
+		self._logger.debug("Cancelling timer and setting everything None.")
+		if self._fileRemovalTimer is not None:
+			self._fileRemovalTimer.cancel()
+			self._fileRemovalTimer = None
+		if self._fileRemovalLastAdded is not None:
+			self._fileRemovalLastAdded = None
+		if self._fileRemovalLastDeleted is not None:
+			self._fileRemovalLastDeleted = None
+
+	def _fileRemovalTimer_task(self):
+		if self._waitForAnalysis:
+			return
+		if self._fileRemovalLastDeleted is not None:
+			self._logger.debug("File removal timer task, _fileRemovalLastDeleted: %s" % self._fileRemovalLastDeleted["name"])
+		if self._fileRemovalLastAdded is not None:
+			self._logger.debug("File removal timer task, _fileRemovalLastAdded: %s" % self._fileRemovalLastAdded["name"])
+		if self._fileRemovalLastDeleted is not None:
+			thumbnail = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted["path"].replace(".ufp.gcode", ".png"))
+			ufp_file = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted["path"].replace(".ufp.gcode", ".ufp"))
+			gcode_file = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted["path"])
+			if self._fileRemovalLastAdded is not None and self._fileRemovalLastDeleted["name"] == self._fileRemovalLastAdded["name"]:
+				# copy thumbnail to new path and update metadata
+				thumbnail_new = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastAdded["path"].replace(".ufp.gcode", ".png"))
+				thumbnail_new_path = os.path.dirname(thumbnail_new)
+				self._logger.debug(thumbnail)
+				self._logger.debug(thumbnail_new)
+				self._logger.debug(thumbnail_new_path)
+				if not os.path.exists(thumbnail_new_path):
+					os.makedirs(thumbnail_new_path)
+				if os.path.exists(thumbnail_new):
+					os.remove(thumbnail_new)
+				os.rename(thumbnail, thumbnail_new)
+				self._logger.debug("Updating thumbnail url.")
+				thumbnail_url = "/plugin/UltimakerFormatPackage/thumbnail/" + self._fileRemovalLastAdded["path"].replace(".ufp.gcode", ".png")
+				self._storage_interface = self._file_manager._storage(self._fileRemovalLastAdded.get("origin", "local"))
+				self._storage_interface.set_additional_metadata(self._fileRemovalLastAdded.get("path"), "refs", dict(thumbnail=thumbnail_url), merge=True)
+
+			# remove files just in case they are left behind.
 			if os.path.exists(thumbnail):
 				os.remove(thumbnail)
 			if os.path.exists(ufp_file):
 				os.remove(ufp_file)
+			if os.path.exists(gcode_file):
+				os.remove(gcode_file)
+
+		self._fileRemovalTimer_stop()
+
+	def _wait_for_analysis(self):
+		self._waitForAnalysis = True
+
+		while True:
+			if not self._waitForAnalysis:
+				return False
+
+			if not self._analysis_active:
+				self._waitForAnalysis = False
+				return True
+
+			time.sleep(5)
 
 	##-- UFP upload extenstion tree hook
 	def get_extension_tree(self, *args, **kwargs):
