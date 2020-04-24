@@ -17,7 +17,7 @@ $(function() {
 		self.filesViewModel.open_thumbnail = function(data) {
 			if(data.name.indexOf('.ufp.gcode') > 0){
 				var thumbnail_title = data.path.replace('.ufp.gcode','.ufp');
-				var thumbnail_url = '/plugin/UltimakerFormatPackage/thumbnail/' + data.path.replace('.ufp.gcode','.png');
+				var thumbnail_url = 'plugin/UltimakerFormatPackage/thumbnail/' + data.path.replace('.ufp.gcode','.png');
 				self.thumbnail_url(thumbnail_url);
 				self.thumbnail_title(thumbnail_title);
 				$('div#thumbnail_viewer').modal("show");
@@ -79,7 +79,6 @@ $(function() {
 			                                '<img data-bind="attr: {src: $root.inline_thumbnail_url($data), width: $root.thumbnailScaleValue}, ' +
 			                                'visible: ($data.name.indexOf(\'.ufp.gcode\') > -1 && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true), ' +
 			                                'click: function() { if ($root.loginState.isUser()) { $root.open_thumbnail($data) } else { return; } }" ' +
-//			                                'width="100%" ' +
 			                                'style="display: none;"/></div>'
 
 			$("#files_template_machinecode").text(function () {
