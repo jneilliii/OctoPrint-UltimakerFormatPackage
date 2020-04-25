@@ -6,7 +6,7 @@ import octoprint.filemanager.util
 import os
 from zipfile import ZipFile
 from octoprint.util import version, RepeatedTimer
-from octoprint.filemanager.analysis import QueueEntry
+import datetime
 
 class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 								   octoprint.plugin.AssetPlugin,
@@ -50,39 +50,32 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 	##~~ EventHandlerPlugin mixin
 
 	def on_event(self, event, payload):
+		if not event in ["FileAdded","FileRemoved","MetadataAnalysisStarted","MetadataAnalysisFinished","FolderRemoved"]:
+			return
+
+		if event == "FolderRemoved" and payload["storage"] == "local":
+			import shutil
+			shutil.rmtree(self.get_plugin_data_folder() + "/" + payload["path"], ignore_errors=True)
+		# Hack that deletes uploaded ufp file from upload path
 		if event == "FileAdded" and "ufp" in payload["type"]:
-			# Add ufp file to analysisqueue
 			old_name = self._settings.global_get_basefolder("uploads") + "/" + payload["path"]
-			new_name = old_name + ".gcode"
 			ufp_file = self.get_plugin_data_folder() + "/" + payload["path"]
-			gcode_file = ufp_file + ".gcode"
 			if os.path.exists(ufp_file):
 				os.remove(ufp_file)
-			if os.path.exists(new_name):
-				os.remove(new_name)
-			if os.path.exists(gcode_file):
-				os.remove(gcode_file)
-			os.rename(old_name, new_name)
-			printer_profile = self._printer_profile_manager.get("_default")
-			if version.get_octoprint_version() > version.get_comparable_version("1.3.9"):
-				entry = QueueEntry(payload["name"] + ".gcode",payload["path"] + ".gcode","gcode",payload["storage"],new_name, printer_profile, None)
-			else:
-				entry = QueueEntry(payload["name"] + ".gcode",payload["path"] + ".gcode","gcode",payload["storage"],new_name, printer_profile)
-			self._analysis_queue.enqueue(entry,high_priority=True)
-		if event == "MetadataAnalysisStarted" and  "ufp" in payload["path"]:
+			if os.path.exists(old_name):
+				os.remove(old_name)
+			return
+		if event == "MetadataAnalysisStarted" and payload["path"].endswith(".gcode"):
 			self._analysis_active = True
-		if event == "MetadataAnalysisFinished" and "ufp" in payload["path"]:
+			return
+		if event == "MetadataAnalysisFinished" and payload["path"].endswith(".gcode"):
 			self._analysis_active = False
-		if event == "FileAdded" and payload["name"].endswith(".ufp.gcode"):
-			self._logger.debug("File added %s" % payload["name"])
-			self._logger.debug('Adding thumbnail url to metadata')
-			thumbnail_url = "/plugin/UltimakerFormatPackage/thumbnail/" + payload["path"].replace(".ufp.gcode", ".png")
-			self._file_manager.set_additional_metadata("local", payload["path"], "thumbnail", thumbnail_url, overwrite=True)
-			self._fileRemovalLastAdded = payload
-		if event == "FileRemoved" and payload["name"].endswith(".ufp.gcode"):
+			return
+		if event == "FileRemoved" and payload["name"].endswith(".gcode"):
 			self._logger.debug("File removed %s" % payload["name"])
 			self._fileRemovalLastDeleted = payload
 			self._fileRemovalTimer_start()
+			return
 
 	##~~ File Removal Timer
 
@@ -110,12 +103,12 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		if self._fileRemovalLastAdded is not None:
 			self._logger.debug("File removal timer task, _fileRemovalLastAdded: %s" % self._fileRemovalLastAdded["name"])
 		if self._fileRemovalLastDeleted is not None:
-			thumbnail = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted["path"].replace(".ufp.gcode", ".png"))
-			ufp_file = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted["path"].replace(".ufp.gcode", ".ufp"))
+			thumbnail = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted["path"].replace(".gcode", ".png"))
+			ufp_file = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted["path"].replace(".gcode", ".ufp"))
 			gcode_file = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted["path"])
 			if self._fileRemovalLastAdded is not None and self._fileRemovalLastDeleted["name"] == self._fileRemovalLastAdded["name"]:
 				# copy thumbnail to new path and update metadata
-				thumbnail_new = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastAdded["path"].replace(".ufp.gcode", ".png"))
+				thumbnail_new = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastAdded["path"].replace(".gcode", ".png"))
 				thumbnail_new_path = os.path.dirname(thumbnail_new)
 				self._logger.debug(thumbnail)
 				self._logger.debug(thumbnail_new)
@@ -125,9 +118,11 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 				if os.path.exists(thumbnail_new):
 					os.remove(thumbnail_new)
 				os.rename(thumbnail, thumbnail_new)
-				self._logger.debug("Updating thumbnail url.")
-				thumbnail_url = "/plugin/UltimakerFormatPackage/thumbnail/" + self._fileRemovalLastAdded["path"].replace(".ufp.gcode", ".png")
-				self._file_manager.set_additional_metadata("local", payload["path"], "thumbnail", thumbnail_url, overwrite=True)
+				if os.path.exists(thumbnail_new):
+					self._logger.debug("Updating thumbnail url.")
+					thumbnail_url = "plugin/UltimakerFormatPackage/thumbnail/" + self._fileRemovalLastAdded["path"].replace(".gcode", ".png") + "?" + "{:%Y%m%d%H%M%S}".format(datetime.datetime.now())
+					self._file_manager.set_additional_metadata("local", payload["path"], "thumbnail", thumbnail_url, overwrite=True)
+					self._file_manager.set_additional_metadata("local", payload["path"], "thumbnail_src", self._identifier, overwrite=True)
 
 			# remove files just in case they are left behind.
 			if os.path.exists(thumbnail):
@@ -165,17 +160,29 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		ufp_extensions = [".ufp"]
 		name, extension = os.path.splitext(file_object.filename)
 		if extension in ufp_extensions:
-			save_filename = self.get_plugin_data_folder() + "/" + path
-			save_filepath = os.path.dirname(save_filename)
-			if not os.path.exists(save_filepath):
-				os.makedirs(save_filepath)
-			file_object.save(save_filename)
-			with ZipFile(save_filename,'r') as zipObj:
-				with open(save_filename.replace(".ufp",".png"), 'wb') as thumbnail:
+			ufp_filename = self.get_plugin_data_folder() + "/" + path
+			png_filename = ufp_filename.replace(".ufp",".png")
+			gco_filename = ufp_filename.replace(".ufp", ".gcode")
+			ufp_filepath = os.path.dirname(ufp_filename)
+
+			if not os.path.exists(ufp_filepath):
+				os.makedirs(ufp_filepath)
+
+			file_object.save(ufp_filename)
+			with ZipFile(ufp_filename,'r') as zipObj:
+				with open(png_filename, 'wb') as thumbnail:
 					thumbnail.write(zipObj.read("/Metadata/thumbnail.png"))
-				with open(save_filename + ".gcode", 'wb') as f:
+				with open(gco_filename, 'wb') as f:
 					f.write(zipObj.read("/3D/model.gcode"))
-				return octoprint.filemanager.util.DiskFileWrapper(path + ".gcode", save_filename + ".gcode")
+
+			file_wrapper = octoprint.filemanager.util.DiskFileWrapper(path.replace(".ufp", ".gcode"), gco_filename, move=False)
+			uploaded_file = self._file_manager.add_file("local", file_wrapper.filename, file_wrapper, allow_overwrite=True)
+			self._logger.debug('Adding thumbnail url to metadata')
+			thumbnail_url = "plugin/UltimakerFormatPackage/thumbnail/" + uploaded_file.replace(".gcode", ".png") + "?" + "{:%Y%m%d%H%M%S}".format(datetime.datetime.now())
+			self._file_manager.set_additional_metadata("local", uploaded_file, "thumbnail", thumbnail_url, overwrite=True)
+			self._file_manager.set_additional_metadata("local", uploaded_file, "thumbnail_src", self._identifier, overwrite=True)
+
+			return octoprint.filemanager.util.DiskFileWrapper(path, ufp_filename)
 		return file_object
 
 	##~~ Routes hook

@@ -15,18 +15,18 @@ $(function() {
 		self.filesViewModel = parameters[1];
 
 		self.filesViewModel.open_thumbnail = function(data) {
-			if(data.name.indexOf('.ufp.gcode') > 0){
-				var thumbnail_title = data.path.replace('.ufp.gcode','.ufp');
-				var thumbnail_url = 'plugin/UltimakerFormatPackage/thumbnail/' + data.path.replace('.ufp.gcode','.png');
-				self.thumbnail_url(thumbnail_url);
+			if(data.name.indexOf('.gcode') > 0){
+				var thumbnail_title = data.path.replace('.gcode','');
+				// var thumbnail_url = 'plugin/UltimakerFormatPackage/thumbnail/' + data.path.replace('.ufp.gcode','.png');
+				self.thumbnail_url(data.thumbnail);
 				self.thumbnail_title(thumbnail_title);
 				$('div#thumbnail_viewer').modal("show");
 			}
 		}
 
-		self.filesViewModel.inline_thumbnail_url = function(data) {
+/* 		self.filesViewModel.inline_thumbnail_url = function(data) {
 			return '/plugin/UltimakerFormatPackage/thumbnail/' + data.path.replace('.ufp.gcode','.png');
-		}
+		} */
 
 		self.DEFAULT_THUMBNAIL_SCALE = "100%"
 		self.filesViewModel.thumbnailScaleValue = ko.observable(self.DEFAULT_THUMBNAIL_SCALE)
@@ -73,11 +73,11 @@ $(function() {
 
 		$(document).ready(function(){
 			let regex = /<div class="btn-group action-buttons">([\s\S]*)<.div>/mi;
-			let template = '<div class="btn btn-mini" data-bind="click: function() { if ($root.loginState.isUser()) { $root.open_thumbnail($data) } else { return; } }, visible: ($data.name.indexOf(\'.ufp.gcode\') > -1 && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == false)" title="Show Thumbnail" style="display: none;"><i class="fa fa-image"></i></div>';
+			let template = '<div class="btn btn-mini" data-bind="click: function() { if ($root.loginState.isUser()) { $root.open_thumbnail($data) } else { return; } }, visible: ($data.thumbnail_src == \'UltimakerFormatPackage\' && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == false)" title="Show Thumbnail" style="display: none;"><i class="fa fa-image"></i></div>';
 			let inline_thumbnail_template = '<div class="row-fluid inline_thumbnail" ' +
-			                                'data-bind="if: ($data.name.indexOf(\'.ufp.gcode\') > -1 && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true), style: {\'text-align\': $root.thumbnailAlignValue}">' +
-			                                '<img data-bind="attr: {src: $root.inline_thumbnail_url($data), width: $root.thumbnailScaleValue}, ' +
-			                                'visible: ($data.name.indexOf(\'.ufp.gcode\') > -1 && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true), ' +
+			                                'data-bind="if: ($data.thumbnail_src == \'UltimakerFormatPackage\' && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true), style: {\'text-align\': $root.thumbnailAlignValue}">' +
+			                                '<img data-bind="attr: {src: $data.thumbnail, width: $root.thumbnailScaleValue}, ' +
+			                                'visible: ($data.thumbnail_src == \'UltimakerFormatPackage\' && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true), ' +
 			                                'click: function() { if ($root.loginState.isUser()) { $root.open_thumbnail($data) } else { return; } }" ' +
 			                                'style="display: none;"/></div>'
 
