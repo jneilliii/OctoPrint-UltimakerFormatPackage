@@ -58,12 +58,11 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			shutil.rmtree(self.get_plugin_data_folder() + "/" + payload["path"], ignore_errors=True)
 		# Hack that deletes uploaded ufp file from upload path
 		if event == "FileAdded" and "ufp" in payload["type"]:
-			old_name = self._settings.global_get_basefolder("uploads") + "/" + payload["path"]
+			old_name = payload["path"] # self._settings.global_get_basefolder("uploads") + "/" + 
 			ufp_file = self.get_plugin_data_folder() + "/" + payload["path"]
 			if os.path.exists(ufp_file):
 				os.remove(ufp_file)
-			if os.path.exists(old_name):
-				os.remove(old_name)
+			self._file_manager.remove_file("local", old_name)
 			return
 		if event == "MetadataAnalysisStarted" and payload["path"].endswith(".gcode"):
 			self._analysis_active = True
