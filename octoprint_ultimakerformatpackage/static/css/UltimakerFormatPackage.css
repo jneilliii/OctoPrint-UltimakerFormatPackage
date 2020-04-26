@@ -1,8 +1,8 @@
-#thumbnail_viewer {
+/* #UltimakerFormatPackage_thumbnail_viewer {
 	width: 330px;
 	margin-left: -165px;
-}
+} */
 
-#thumbnail_viewer h3 {
+#UltimakerFormatPackage_thumbnail_viewer h3 {
 	overflow: hidden;
 }
