@@ -2,6 +2,11 @@
 <div class="control-group">
 	<div class="controls">
 		<label class="checkbox">
+		<input type="checkbox" data-bind="checked: settings.plugins.UltimakerFormatPackage.state_panel_thumbnail"> Show thumbnail in state panel.
+		</label>
+	</div>
+	<div class="controls">
+		<label class="checkbox">
 		<input type="checkbox" data-bind="checked: settings.plugins.UltimakerFormatPackage.inline_thumbnail"> Use inline thumbnails.
 		</label>
 	</div>
@@ -22,6 +27,10 @@
 		</label>
 	</div>
 	<div class="controls">
-		<input type="text" class="input-small" data-bind="enable:settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true && settings.plugins.UltimakerFormatPackage.align_inline_thumbnail() == true, value: settings.plugins.UltimakerFormatPackage.inline_thumbnail_align_value">
+		<select class="input-small" style="width: 101px;" data-bind="enable:settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true && settings.plugins.UltimakerFormatPackage.align_inline_thumbnail() == true, value: settings.plugins.UltimakerFormatPackage.inline_thumbnail_align_value">
+			<option value="left">Left</option>
+			<option value="center">Center</option>
+			<option value="right">Right</option>
+		</select>
 	</div>
 </div>
