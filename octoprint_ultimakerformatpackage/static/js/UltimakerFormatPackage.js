@@ -10,6 +10,8 @@ $(function() {
 		self.thumbnail_url = ko.observable('/static/img/tentacle-20x20.png');
 		self.thumbnail_title = ko.observable('');
 		self.inline_thumbnail = ko.observable();
+		self.crawling_files = ko.observable(false);
+		self.crawl_results = ko.observableArray([]);
 
 		self.settingsViewModel = parameters[0];
 		self.filesViewModel = parameters[1];
@@ -29,6 +31,34 @@ $(function() {
 
 		self.DEFAULT_THUMBNAIL_ALIGN = "left"
 		self.filesViewModel.thumbnailAlignValue = ko.observable(self.DEFAULT_THUMBNAIL_ALIGN)
+
+		self.crawl_files = function(){
+			self.crawling_files(true);
+			self.crawl_results([]);
+			$.ajax({
+				url: API_BASEURL + "plugin/UltimakerFormatPackage",
+				type: "POST",
+				dataType: "json",
+				data: JSON.stringify({
+					command: "crawl_files"
+				}),
+				contentType: "application/json; charset=UTF-8"
+			}).done(function(data){
+				for (key in data) {
+					if(data[key].length){
+						self.crawl_results.push({name: ko.observable(key), files: ko.observableArray(data[key])})
+					}
+				}
+				console.log(self.crawl_results());
+				if(self.crawl_results().length == 0){
+					self.crawl_results.push({name: ko.observable('No files to convert'), files: ko.observableArray([])});
+				}
+				self.filesViewModel.requestData({force: true});
+				self.crawling_files(false);
+			}).fail(function(data){
+				self.crawling_files(false);
+			})
+		}
 
 		self.onBeforeBinding = function() {
 			// assign initial scaling
@@ -105,6 +135,6 @@ $(function() {
 	OCTOPRINT_VIEWMODELS.push({
 		construct: UltimakerformatpackageViewModel,
 		dependencies: ['settingsViewModel', 'filesViewModel'],
-		elements: ['div#UltimakerFormatPackage_thumbnail_viewer']
+		elements: ['div#UltimakerFormatPackage_thumbnail_viewer', '#ufp_crawl_files', '#ufp_crawl_files_results']
 	});
 });
