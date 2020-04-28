@@ -26,6 +26,7 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 	def get_settings_defaults(self):
 		return dict(
 			installed=True,
+			installed_version=self._plugin_version,
 			inline_thumbnail=False,
 			scale_inline_thumbnail=False,
 			inline_thumbnail_scale_value="50",
