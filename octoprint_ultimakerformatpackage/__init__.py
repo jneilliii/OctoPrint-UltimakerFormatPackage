@@ -169,7 +169,7 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 
 	def _process_gcode(self, gcode_file, results=[]):
 		self._logger.debug(gcode_file["path"])
-		if gcode_file.get("children") == None:
+		if gcode_file.get("type") == "machinecode":
 			self._logger.debug(gcode_file.get("thumbnail"))
 			if gcode_file.get("thumbnail_src", False):
 				return results
@@ -179,10 +179,12 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 				self._file_manager.set_additional_metadata("local", gcode_file["path"], "thumbnail", gcode_file["refs"].get("thumbnail").replace("/plugin/UltimakerFormatPackage", "plugin/UltimakerFormatPackage"), overwrite=True)
 				self._file_manager.remove_additional_metadata("local", gcode_file["path"], "refs")
 				self._file_manager.set_additional_metadata("local", gcode_file["path"], "thumbnail_src", self._identifier, overwrite=True)
-		else:
+		elif gcode_file.get("type") == "folder" and not gcode_file.get("children") == None:
 			children = gcode_file["children"]
 			for key, file in children.items():
 				self._process_gcode(children[key], results)
+		elif gcode_file.get("type") == "folder" and gcode_file.get("children") == None:
+			results["warning"] = True
 		return results
 
 	def get_api_commands(self):
