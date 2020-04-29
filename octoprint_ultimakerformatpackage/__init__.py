@@ -11,7 +11,8 @@ import datetime
 class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 								   octoprint.plugin.AssetPlugin,
 								   octoprint.plugin.TemplatePlugin,
-								   octoprint.plugin.EventHandlerPlugin):
+								   octoprint.plugin.EventHandlerPlugin,
+								  octoprint.plugin.SimpleApiPlugin):
 
 	def __init__(self):
 		self._fileRemovalTimer = None
@@ -25,6 +26,7 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 	def get_settings_defaults(self):
 		return dict(
 			installed=True,
+			installed_version=self._plugin_version,
 			inline_thumbnail=False,
 			scale_inline_thumbnail=False,
 			inline_thumbnail_scale_value="50",
@@ -146,6 +148,64 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 				return True
 
 			time.sleep(5)
+
+	##~~ Utility Functions
+
+	def deep_get(self, d, keys, default=None):
+		"""
+		Example:
+			d = {'meta': {'status': 'OK', 'status_code': 200}}
+			deep_get(d, ['meta', 'status_code'])		  # => 200
+			deep_get(d, ['garbage', 'status_code'])	   # => None
+			deep_get(d, ['meta', 'garbage'], default='-') # => '-'
+		"""
+		assert type(keys) is list
+		if d is None:
+			return default
+		if not keys:
+			return d
+		return self.deep_get(d.get(keys[0]), keys[1:], default)
+
+	##~~ SimpleApiPlugin mixin
+
+	def _process_gcode(self, gcode_file, results=[]):
+		self._logger.debug(gcode_file["path"])
+		if gcode_file.get("type") == "machinecode":
+			self._logger.debug(gcode_file.get("thumbnail"))
+			if gcode_file.get("thumbnail_src", False):
+				return results
+			if gcode_file.get("refs", False) and gcode_file["refs"].get("thumbnail", False):
+				results["no_thumbnail_src"].append(gcode_file["path"])
+				self._logger.debug("Setting metadata for %s" % gcode_file["path"])
+				self._file_manager.set_additional_metadata("local", gcode_file["path"], "thumbnail", gcode_file["refs"].get("thumbnail").replace("/plugin/UltimakerFormatPackage", "plugin/UltimakerFormatPackage"), overwrite=True)
+				self._file_manager.remove_additional_metadata("local", gcode_file["path"], "refs")
+				self._file_manager.set_additional_metadata("local", gcode_file["path"], "thumbnail_src", self._identifier, overwrite=True)
+		elif gcode_file.get("type") == "folder" and not gcode_file.get("children") == None:
+			children = gcode_file["children"]
+			for key, file in children.items():
+				self._process_gcode(children[key], results)
+		elif gcode_file.get("type") == "folder" and gcode_file.get("children") == None:
+			results["warning"] = True
+		return results
+
+	def get_api_commands(self):
+		return dict(crawl_files=[])
+
+	def on_api_command(self, command, data):
+		import flask
+		import json
+		from octoprint.server import user_permission
+		if not user_permission.can():
+			return flask.make_response("Insufficient rights", 403)
+
+		if command == "crawl_files":
+			self._logger.debug("Crawling Files")
+			FileList = self._file_manager.list_files()
+			LocalFiles = FileList["local"]
+			results = dict(no_thumbnail=[],no_thumbnail_src=[])
+			for key, file in LocalFiles.items():
+				results = self._process_gcode(LocalFiles[key], results)
+			return flask.jsonify(results)
 
 	##-- UFP upload extenstion tree hook
 	def get_extension_tree(self, *args, **kwargs):
