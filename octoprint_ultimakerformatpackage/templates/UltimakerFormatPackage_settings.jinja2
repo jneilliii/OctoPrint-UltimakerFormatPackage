@@ -38,13 +38,12 @@
 	<div class="row-fluid" data-bind="allowBindings: true">
 		<div id="ufp_crawl_files" class="control-group">
 			<div class="controls">
-				<button class="btn btn-primary" data-bind="click: crawl_files, enable: !crawling_files()"><i class="fa fa-spinner fa-spin" data-bind="visible: crawling_files" style="display: none;"></i> Crawl Files</button>
+				<button class="btn btn-primary" data-bind="click: crawl_files, enable: !crawling_files()"><i class="fa fa-spinner fa-spin" data-bind="visible: crawling_files" style="display: none;"></i> Scan Files</button>
 			</div>
 		</div>
 		<div id="ufp_crawl_files_results" class="row-fluid" data-bind="if: crawl_results().length > 0">
 			<div class="alert alert-block">
-				<h4>Crawl Results</h4>
-				<div class="muted" data-bind="if: show_crawl_warning()"><small><span class="label label-important">Warning: </span> Currently the scan is only able to process the root folder and first level of sub-folders.</small></div>
+				<h4>Scan Results</h4>
 				<ul class="unstyled" data-bind="foreach: { data: crawl_results, as: 'category', noChildContext: true }">
 					<!-- ko if:category.files().length == 0 -->
 					<li><span data-bind="text: category.name" class="label label-success"></span></li>
