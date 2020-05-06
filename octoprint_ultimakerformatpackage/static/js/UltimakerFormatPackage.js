@@ -12,7 +12,6 @@ $(function() {
 		self.inline_thumbnail = ko.observable();
 		self.crawling_files = ko.observable(false);
 		self.crawl_results = ko.observableArray([]);
-		self.show_crawl_warning = ko.observable(false);
 
 		self.settingsViewModel = parameters[0];
 		self.filesViewModel = parameters[1];
@@ -45,12 +44,9 @@ $(function() {
 				}),
 				contentType: "application/json; charset=UTF-8"
 			}).done(function(data){
-				self.show_crawl_warning(false);
 				for (key in data) {
-					if(data[key].length && data[key] !== 'warning'){
+					if(data[key].length){
 						self.crawl_results.push({name: ko.observable(key), files: ko.observableArray(data[key])});
-					} else if(key == 'warning'){
-						self.show_crawl_warning(true);
 					}
 				}
 				
