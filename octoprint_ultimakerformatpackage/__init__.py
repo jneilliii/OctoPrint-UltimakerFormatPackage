@@ -73,6 +73,9 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		if event == "MetadataAnalysisFinished" and payload["path"].endswith(".gcode"):
 			self._analysis_active = False
 			return
+		if event == "FileAdded" and payload["path"].endswith(".gcode"):
+			self._logger.debug("File added %s" % payload["name"])
+			self._fileRemovalLastAdded = payload
 		if event == "FileRemoved" and payload["name"].endswith(".gcode"):
 			self._logger.debug("File removed %s" % payload["name"])
 			self._fileRemovalLastDeleted = payload
