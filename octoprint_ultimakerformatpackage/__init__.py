@@ -16,8 +16,8 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 
 	def __init__(self):
 		self._fileRemovalTimer = None
-		self._fileRemovalLastDeleted = None
-		self._fileRemovalLastAdded = None
+		self._fileRemovalLastDeleted = {}
+		self._fileRemovalLastAdded = {}
 		self._waitForAnalysis = False
 		self._analysis_active = False
 
@@ -61,7 +61,7 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			shutil.rmtree(self.get_plugin_data_folder() + "/" + payload["path"], ignore_errors=True)
 		# Hack that deletes uploaded ufp file from upload path
 		if event == "FileAdded" and "ufp" in payload["type"]:
-			old_name = payload["path"] # self._settings.global_get_basefolder("uploads") + "/" + 
+			old_name = payload["path"] # self._settings.global_get_basefolder("uploads") + "/" +
 			ufp_file = self.get_plugin_data_folder() + "/" + payload["path"]
 			if os.path.exists(ufp_file):
 				os.remove(ufp_file)
@@ -75,10 +75,10 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			return
 		if event == "FileAdded" and payload["path"].endswith(".gcode"):
 			self._logger.debug("File added %s" % payload["name"])
-			self._fileRemovalLastAdded = payload
+			self._fileRemovalLastAdded[payload["name"]] = payload
 		if event == "FileRemoved" and payload["name"].endswith(".gcode"):
 			self._logger.debug("File removed %s" % payload["name"])
-			self._fileRemovalLastDeleted = payload
+			self._fileRemovalLastDeleted[payload["name"]] = payload
 			self._fileRemovalTimer_start()
 			return
 
@@ -95,47 +95,51 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		if self._fileRemovalTimer is not None:
 			self._fileRemovalTimer.cancel()
 			self._fileRemovalTimer = None
-		if self._fileRemovalLastAdded is not None:
-			self._fileRemovalLastAdded = None
-		if self._fileRemovalLastDeleted is not None:
-			self._fileRemovalLastDeleted = None
+		# if self._fileRemovalLastAdded is not None:
+		# 	self._fileRemovalLastAdded = None
+		# if self._fileRemovalLastDeleted is not None:
+		# 	self._fileRemovalLastDeleted = None
 
 	def _fileRemovalTimer_task(self):
 		if self._waitForAnalysis:
 			return
-		if self._fileRemovalLastDeleted is not None:
-			self._logger.debug("File removal timer task, _fileRemovalLastDeleted: %s" % self._fileRemovalLastDeleted["name"])
-		if self._fileRemovalLastAdded is not None:
-			self._logger.debug("File removal timer task, _fileRemovalLastAdded: %s" % self._fileRemovalLastAdded["name"])
-		if self._fileRemovalLastDeleted is not None:
-			thumbnail = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted["path"].replace(".gcode", ".png"))
-			ufp_file = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted["path"].replace(".gcode", ".ufp"))
-			gcode_file = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted["path"])
-			if self._fileRemovalLastAdded is not None and self._fileRemovalLastDeleted["name"] == self._fileRemovalLastAdded["name"]:
+		# if self._fileRemovalLastDeleted is not None:
+		# 	self._logger.debug("File removal timer task, _fileRemovalLastDeleted: %s" % self._fileRemovalLastDeleted["name"])
+		# if self._fileRemovalLastAdded is not None:
+		# 	self._logger.debug("File removal timer task, _fileRemovalLastAdded: %s" % self._fileRemovalLastAdded["name"])
+		for key in list(self._fileRemovalLastDeleted):
+			thumbnail = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted[key]["path"].replace(".gcode", ".png"))
+			ufp_file = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted[key]["path"].replace(".gcode", ".ufp"))
+			gcode_file = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted[key]["path"])
+			if self._fileRemovalLastAdded.get(key, False):
 				# copy thumbnail to new path and update metadata
-				thumbnail_new = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastAdded["path"].replace(".gcode", ".png"))
-				thumbnail_new_path = os.path.dirname(thumbnail_new)
-				self._logger.debug(thumbnail)
-				self._logger.debug(thumbnail_new)
-				self._logger.debug(thumbnail_new_path)
-				if not os.path.exists(thumbnail_new_path):
-					os.makedirs(thumbnail_new_path)
-				if os.path.exists(thumbnail_new):
-					os.remove(thumbnail_new)
-				os.rename(thumbnail, thumbnail_new)
-				if os.path.exists(thumbnail_new):
+				thumbnail_new = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastAdded[key]["path"].replace(".gcode", ".png"))
+				thumbnail_new_path = os.path.dirname(thumbnail_new.replace("//", "/"))
+				self._logger.debug(thumbnail.replace("//", "/"))
+				self._logger.debug(thumbnail_new.replace("//", "/"))
+				self._logger.debug(thumbnail_new_path.replace("//", "/"))
+				if not os.path.exists(thumbnail_new_path.replace("//", "/")):
+					os.makedirs(thumbnail_new_path.replace("//", "/"))
+				if os.path.exists(thumbnail_new.replace("//", "/")):
+					os.remove(thumbnail_new.replace("//", "/"))
+				os.rename(thumbnail, thumbnail_new.replace("//", "/"))
+				if os.path.exists(thumbnail_new.replace("//", "/")):
 					self._logger.debug("Updating thumbnail url.")
-					thumbnail_url = "plugin/UltimakerFormatPackage/thumbnail/" + self._fileRemovalLastAdded["path"].replace(".gcode", ".png") + "?" + "{:%Y%m%d%H%M%S}".format(datetime.datetime.now())
-					self._file_manager.set_additional_metadata("local", payload["path"], "thumbnail", thumbnail_url, overwrite=True)
-					self._file_manager.set_additional_metadata("local", payload["path"], "thumbnail_src", self._identifier, overwrite=True)
+					thumbnail_url = "plugin/UltimakerFormatPackage/thumbnail/" + self._fileRemovalLastAdded[key]["path"].replace(".gcode", ".png") + "?" + "{:%Y%m%d%H%M%S}".format(datetime.datetime.now())
+					self._file_manager.set_additional_metadata("local", self._fileRemovalLastAdded[key]["path"], "thumbnail", thumbnail_url.replace("//", "/"), overwrite=True)
+					self._file_manager.set_additional_metadata("local", self._fileRemovalLastAdded[key]["path"], "thumbnail_src", self._identifier, overwrite=True)
+
+				self._fileRemovalLastAdded.pop(key)
 
 			# remove files just in case they are left behind.
-			if os.path.exists(thumbnail):
-				os.remove(thumbnail)
-			if os.path.exists(ufp_file):
-				os.remove(ufp_file)
-			if os.path.exists(gcode_file):
-				os.remove(gcode_file)
+			if os.path.exists(thumbnail.replace("//", "/")):
+				os.remove(thumbnail.replace("//", "/"))
+			if os.path.exists(ufp_file.replace("//", "/")):
+				os.remove(ufp_file.replace("//", "/"))
+			if os.path.exists(gcode_file.replace("//", "/")):
+				os.remove(gcode_file.replace("//", "/"))
+
+			self._fileRemovalLastDeleted.pop(key)
 
 		self._fileRemovalTimer_stop()
 
