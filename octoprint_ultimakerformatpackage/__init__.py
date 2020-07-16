@@ -7,6 +7,8 @@ import os
 from zipfile import ZipFile
 from octoprint.util import version, RepeatedTimer
 import datetime
+import time
+
 
 class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 								   octoprint.plugin.AssetPlugin,
@@ -16,8 +18,8 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 
 	def __init__(self):
 		self._fileRemovalTimer = None
-		self._fileRemovalLastDeleted = None
-		self._fileRemovalLastAdded = None
+		self._fileRemovalLastDeleted = {}
+		self._fileRemovalLastAdded = {}
 		self._waitForAnalysis = False
 		self._analysis_active = False
 
@@ -53,7 +55,7 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 	##~~ EventHandlerPlugin mixin
 
 	def on_event(self, event, payload):
-		if not event in ["FileAdded","FileRemoved","MetadataAnalysisStarted","MetadataAnalysisFinished","FolderRemoved"]:
+		if event not in ["FileAdded", "FileRemoved", "MetadataAnalysisStarted", "MetadataAnalysisFinished", "FolderRemoved"]:
 			return
 
 		if event == "FolderRemoved" and payload["storage"] == "local":
@@ -61,7 +63,7 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			shutil.rmtree(self.get_plugin_data_folder() + "/" + payload["path"], ignore_errors=True)
 		# Hack that deletes uploaded ufp file from upload path
 		if event == "FileAdded" and "ufp" in payload["type"]:
-			old_name = payload["path"] # self._settings.global_get_basefolder("uploads") + "/" + 
+			old_name = payload["path"] # self._settings.global_get_basefolder("uploads") + "/" +
 			ufp_file = self.get_plugin_data_folder() + "/" + payload["path"]
 			if os.path.exists(ufp_file):
 				os.remove(ufp_file)
@@ -73,44 +75,44 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		if event == "MetadataAnalysisFinished" and payload["path"].endswith(".gcode"):
 			self._analysis_active = False
 			return
+		if event == "FileAdded" and payload["path"].endswith(".gcode"):
+			self._logger.debug("File added %s" % payload["name"])
+			self._fileRemovalLastAdded[payload["name"]] = payload
 		if event == "FileRemoved" and payload["name"].endswith(".gcode"):
 			self._logger.debug("File removed %s" % payload["name"])
-			self._fileRemovalLastDeleted = payload
-			self._fileRemovalTimer_start()
+			self._fileRemovalLastDeleted[payload["name"]] = payload
+			self._file_removal_timer_start()
 			return
 
 	##~~ File Removal Timer
 
-	def _fileRemovalTimer_start(self):
+	def _file_removal_timer_start(self):
 		if self._fileRemovalTimer is None:
 			self._logger.debug("Starting removal timer.")
-			self._fileRemovalTimer = RepeatedTimer(5, self._fileRemovalTimer_task)
+			self._fileRemovalTimer = RepeatedTimer(5, self._file_removal_timer_task)
 			self._fileRemovalTimer.start()
 
-	def _fileRemovalTimer_stop(self):
+	def _file_removal_timer_stop(self):
 		self._logger.debug("Cancelling timer and setting everything None.")
 		if self._fileRemovalTimer is not None:
 			self._fileRemovalTimer.cancel()
 			self._fileRemovalTimer = None
-		if self._fileRemovalLastAdded is not None:
-			self._fileRemovalLastAdded = None
-		if self._fileRemovalLastDeleted is not None:
-			self._fileRemovalLastDeleted = None
 
-	def _fileRemovalTimer_task(self):
+	def _file_removal_timer_task(self):
 		if self._waitForAnalysis:
 			return
-		if self._fileRemovalLastDeleted is not None:
-			self._logger.debug("File removal timer task, _fileRemovalLastDeleted: %s" % self._fileRemovalLastDeleted["name"])
-		if self._fileRemovalLastAdded is not None:
-			self._logger.debug("File removal timer task, _fileRemovalLastAdded: %s" % self._fileRemovalLastAdded["name"])
-		if self._fileRemovalLastDeleted is not None:
-			thumbnail = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted["path"].replace(".gcode", ".png"))
-			ufp_file = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted["path"].replace(".gcode", ".ufp"))
-			gcode_file = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted["path"])
-			if self._fileRemovalLastAdded is not None and self._fileRemovalLastDeleted["name"] == self._fileRemovalLastAdded["name"]:
+		for key in list(self._fileRemovalLastDeleted):
+			thumbnail = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted[key]["path"].replace(".gcode", ".png"))
+			ufp_file = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted[key]["path"].replace(".gcode", ".ufp"))
+			gcode_file = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted[key]["path"])
+			# clean up double slashes
+			thumbnail = thumbnail.replace("//", "/")
+			ufp_file = ufp_file.replace("//", "/")
+			gcode_file = gcode_file.replace("//", "/")
+			if self._fileRemovalLastAdded.get(key, False):
 				# copy thumbnail to new path and update metadata
-				thumbnail_new = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastAdded["path"].replace(".gcode", ".png"))
+				thumbnail_new = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastAdded[key]["path"].replace(".gcode", ".png"))
+				thumbnail_new = thumbnail_new.replace("//", "/")
 				thumbnail_new_path = os.path.dirname(thumbnail_new)
 				self._logger.debug(thumbnail)
 				self._logger.debug(thumbnail_new)
@@ -122,9 +124,11 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 				os.rename(thumbnail, thumbnail_new)
 				if os.path.exists(thumbnail_new):
 					self._logger.debug("Updating thumbnail url.")
-					thumbnail_url = "plugin/UltimakerFormatPackage/thumbnail/" + self._fileRemovalLastAdded["path"].replace(".gcode", ".png") + "?" + "{:%Y%m%d%H%M%S}".format(datetime.datetime.now())
-					self._file_manager.set_additional_metadata("local", payload["path"], "thumbnail", thumbnail_url, overwrite=True)
-					self._file_manager.set_additional_metadata("local", payload["path"], "thumbnail_src", self._identifier, overwrite=True)
+					thumbnail_url = "plugin/UltimakerFormatPackage/thumbnail/" + self._fileRemovalLastAdded[key]["path"].replace(".gcode", ".png") + "?" + "{:%Y%m%d%H%M%S}".format(datetime.datetime.now())
+					self._file_manager.set_additional_metadata("local", self._fileRemovalLastAdded[key]["path"], "thumbnail", thumbnail_url, overwrite=True)
+					self._file_manager.set_additional_metadata("local", self._fileRemovalLastAdded[key]["path"], "thumbnail_src", self._identifier, overwrite=True)
+
+				self._fileRemovalLastAdded.pop(key)
 
 			# remove files just in case they are left behind.
 			if os.path.exists(thumbnail):
@@ -134,7 +138,9 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			if os.path.exists(gcode_file):
 				os.remove(gcode_file)
 
-		self._fileRemovalTimer_stop()
+			self._fileRemovalLastDeleted.pop(key)
+
+		self._file_removal_timer_stop()
 
 	def _wait_for_analysis(self):
 		self._waitForAnalysis = True
@@ -198,11 +204,11 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 
 		if command == "crawl_files":
 			self._logger.debug("Crawling Files")
-			FileList = self._file_manager.list_files()
-			LocalFiles = FileList["local"]
+			file_list = self._file_manager.list_files()
+			local_files = file_list["local"]
 			results = dict(no_thumbnail=[],no_thumbnail_src=[])
-			for key, file in LocalFiles.items():
-				results = self._process_gcode(LocalFiles[key], results)
+			for key, file in local_files.items():
+				results = self._process_gcode(local_files[key], results)
 			return flask.jsonify(results)
 
 	##-- UFP upload extenstion tree hook
@@ -250,7 +256,7 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		return [
 				(r"thumbnail/(.*)", LargeResponseHandler, dict(path=self.get_plugin_data_folder(),
 																as_attachment=False,
-																path_validation=path_validation_factory(lambda path: not is_hidden_path(path),status_code=404)))
+																path_validation=path_validation_factory(lambda path: not is_hidden_path(path), status_code=404)))
 				]
 
 	##~~ Softwareupdate hook
@@ -272,8 +278,10 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			)
 		)
 
+
 __plugin_name__ = "Ultimaker Format Package"
 __plugin_pythoncompat__ = ">=2.7,<4"
+
 
 def __plugin_load__():
 	global __plugin_implementation__
