@@ -70,10 +70,10 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			self._file_manager.remove_file("local", old_name)
 			return
 		if event == "MetadataAnalysisStarted" and payload["path"].endswith(".gcode"):
-			self._analysis_active = True
+			self._waitForAnalysis = True
 			return
 		if event == "MetadataAnalysisFinished" and payload["path"].endswith(".gcode"):
-			self._analysis_active = False
+			self._waitForAnalysis = False
 			return
 		if event == "FileAdded" and payload["path"].endswith(".gcode"):
 			self._logger.debug("File added %s" % payload["name"])
@@ -121,7 +121,8 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 					os.makedirs(thumbnail_new_path)
 				if os.path.exists(thumbnail_new):
 					os.remove(thumbnail_new)
-				os.rename(thumbnail, thumbnail_new)
+				if thumbnail != thumbnail_new:
+					os.rename(thumbnail, thumbnail_new)
 				if os.path.exists(thumbnail_new):
 					self._logger.debug("Updating thumbnail url.")
 					thumbnail_url = "plugin/UltimakerFormatPackage/thumbnail/" + self._fileRemovalLastAdded[key]["path"].replace(".gcode", ".png") + "?" + "{:%Y%m%d%H%M%S}".format(datetime.datetime.now())
@@ -141,19 +142,6 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			self._fileRemovalLastDeleted.pop(key)
 
 		self._file_removal_timer_stop()
-
-	def _wait_for_analysis(self):
-		self._waitForAnalysis = True
-
-		while True:
-			if not self._waitForAnalysis:
-				return False
-
-			if not self._analysis_active:
-				self._waitForAnalysis = False
-				return True
-
-			time.sleep(5)
 
 	##~~ Utility Functions
 
@@ -206,7 +194,7 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			self._logger.debug("Crawling Files")
 			file_list = self._file_manager.list_files()
 			local_files = file_list["local"]
-			results = dict(no_thumbnail=[],no_thumbnail_src=[])
+			results = dict(no_thumbnail=[], no_thumbnail_src=[])
 			for key, file in local_files.items():
 				results = self._process_gcode(local_files[key], results)
 			return flask.jsonify(results)
@@ -225,7 +213,7 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		name, extension = os.path.splitext(file_object.filename)
 		if extension in ufp_extensions:
 			ufp_filename = self.get_plugin_data_folder() + "/" + path
-			png_filename = ufp_filename.replace(".ufp",".png")
+			png_filename = ufp_filename.replace(".ufp", ".png")
 			gco_filename = ufp_filename.replace(".ufp", ".gcode")
 			ufp_filepath = os.path.dirname(ufp_filename)
 
@@ -233,13 +221,13 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 				os.makedirs(ufp_filepath)
 
 			file_object.save(ufp_filename)
-			with ZipFile(ufp_filename,'r') as zipObj:
+			with ZipFile(ufp_filename, 'r') as zipObj:
 				with open(png_filename, 'wb') as thumbnail:
 					thumbnail.write(zipObj.read("/Metadata/thumbnail.png"))
 				with open(gco_filename, 'wb') as f:
 					f.write(zipObj.read("/3D/model.gcode"))
 
-			file_wrapper = octoprint.filemanager.util.DiskFileWrapper(path.replace(".ufp", ".gcode"), gco_filename, move=False)
+			file_wrapper = octoprint.filemanager.util.DiskFileWrapper(path.replace(".ufp", ".gcode"), gco_filename, move=True)
 			uploaded_file = self._file_manager.add_file("local", file_wrapper.filename, file_wrapper, allow_overwrite=True)
 			self._logger.debug('Adding thumbnail url to metadata')
 			thumbnail_url = "plugin/UltimakerFormatPackage/thumbnail/" + uploaded_file.replace(".gcode", ".png") + "?" + "{:%Y%m%d%H%M%S}".format(datetime.datetime.now())
@@ -259,12 +247,17 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 																path_validation=path_validation_factory(lambda path: not is_hidden_path(path), status_code=404)))
 				]
 
+	def additional_excludes_hook(self, excludes, *args, **kwargs):
+		if "uploads" in excludes:
+			return ["."]
+		return []
+
 	##~~ Softwareupdate hook
 
 	def get_update_information(self):
 		return dict(
 			UltimakerFormatPackage=dict(
-				displayName="Ultimaker Format Package",
+				displayName="Cura Thumbnails",
 				displayVersion=self._plugin_version,
 
 				# version check: github repository
@@ -279,7 +272,7 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		)
 
 
-__plugin_name__ = "Ultimaker Format Package"
+__plugin_name__ = "Cura Thumbnails"
 __plugin_pythoncompat__ = ">=2.7,<4"
 
 
@@ -292,6 +285,7 @@ def __plugin_load__():
 		"octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information,
 		"octoprint.filemanager.extension_tree": __plugin_implementation__.get_extension_tree,
 		"octoprint.filemanager.preprocessor": __plugin_implementation__.ufp_upload,
-		"octoprint.server.http.routes": __plugin_implementation__.route_hook
+		"octoprint.server.http.routes": __plugin_implementation__.route_hook,
+		"octoprint.plugin.backup.additional_excludes": __plugin_implementation__.additional_excludes_hook
 	}
 

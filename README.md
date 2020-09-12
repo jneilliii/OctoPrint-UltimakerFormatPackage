@@ -1,4 +1,6 @@
-# OctoPrint-UltimakerFormatPackage
+# Cura Thumbnails
+
+(formerly Ultimaker Format Package)
 
 This plugin adds support for Ultimaker Format Package (.ufp) files. Ultimaker Format Package files are based on Open Packaging Conventions (OPC) and contain compressed gcode and a preview thumbnail. This format will automatically be used by the [OctoPrint Connection](https://github.com/fieldOfView/Cura-OctoPrintPlugin) plugin in Cura (install via Marketplace) if this plugin is installed.
 
