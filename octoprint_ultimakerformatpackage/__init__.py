@@ -265,6 +265,16 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 				user="jneilliii",
 				repo="OctoPrint-UltimakerFormatPackage",
 				current=self._plugin_version,
+                stable_branch=dict(
+                    name="Stable", branch="master", comittish=["master"]
+                ),
+                prerelease_branches=[
+                    dict(
+                        name="Release Candidate",
+                        branch="rc",
+                        comittish=["rc", "master"],
+                    )
+                ],
 
 				# update method: pip
 				pip="https://github.com/jneilliii/OctoPrint-UltimakerFormatPackage/archive/{target_version}.zip"
