@@ -104,7 +104,7 @@ $(function() {
 						if($('#UFP_state_thumbnail').length){
 							$('#UFP_state_thumbnail > img').attr('src', ((data.thumbnail) ? data.thumbnail : 'plugin/UltimakerFormatPackage/thumbnail/' + data.path.replace('.ufp.gcode','.png')));
 						} else {
-							$('#state > div > hr:nth-child(4)').after('<div id="UFP_state_thumbnail" class="row-fluid"><img src="'+((data.thumbnail) ? data.thumbnail : 'plugin/UltimakerFormatPackage/thumbnail/' + data.path.replace('.ufp.gcode','.png'))+'" width="100%"/>\n<hr/></div>');
+							$('#state > div > hr:first').after('<div id="UFP_state_thumbnail" class="row-fluid"><img src="'+((data.thumbnail) ? data.thumbnail : 'plugin/UltimakerFormatPackage/thumbnail/' + data.path.replace('.ufp.gcode','.png'))+'" width="100%"/>\n<hr/></div>');
 						}
 					} else {
 						$('#UFP_state_thumbnail').remove();
