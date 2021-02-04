@@ -226,13 +226,13 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 					with open(png_filename, 'wb') as thumbnail:
 						thumbnail.write(zipObj.read("/Metadata/thumbnail.png"))
 				except KeyError:
-					png_filename = null
+					png_filename = None
 				with open(gco_filename, 'wb') as f:
 					f.write(zipObj.read("/3D/model.gcode"))
 
 			file_wrapper = octoprint.filemanager.util.DiskFileWrapper(path.replace(".ufp", ".gcode"), gco_filename, move=True)
 			uploaded_file = self._file_manager.add_file("local", file_wrapper.filename, file_wrapper, allow_overwrite=True)
-			
+
 			if png_filename:
 				self._logger.debug('Adding thumbnail url to metadata')
 				thumbnail_url = "plugin/UltimakerFormatPackage/thumbnail/" + uploaded_file.replace(".gcode", ".png") + "?" + "{:%Y%m%d%H%M%S}".format(datetime.datetime.now())
