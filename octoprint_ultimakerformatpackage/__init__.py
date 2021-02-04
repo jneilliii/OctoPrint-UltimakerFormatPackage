@@ -222,17 +222,22 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 
 			file_object.save(ufp_filename)
 			with ZipFile(ufp_filename, 'r') as zipObj:
-				with open(png_filename, 'wb') as thumbnail:
-					thumbnail.write(zipObj.read("/Metadata/thumbnail.png"))
+				try:
+					with open(png_filename, 'wb') as thumbnail:
+						thumbnail.write(zipObj.read("/Metadata/thumbnail.png"))
+				except KeyError:
+					png_filename = null
 				with open(gco_filename, 'wb') as f:
 					f.write(zipObj.read("/3D/model.gcode"))
 
 			file_wrapper = octoprint.filemanager.util.DiskFileWrapper(path.replace(".ufp", ".gcode"), gco_filename, move=True)
 			uploaded_file = self._file_manager.add_file("local", file_wrapper.filename, file_wrapper, allow_overwrite=True)
-			self._logger.debug('Adding thumbnail url to metadata')
-			thumbnail_url = "plugin/UltimakerFormatPackage/thumbnail/" + uploaded_file.replace(".gcode", ".png") + "?" + "{:%Y%m%d%H%M%S}".format(datetime.datetime.now())
-			self._file_manager.set_additional_metadata("local", uploaded_file, "thumbnail", thumbnail_url, overwrite=True)
-			self._file_manager.set_additional_metadata("local", uploaded_file, "thumbnail_src", self._identifier, overwrite=True)
+			
+			if png_filename:
+				self._logger.debug('Adding thumbnail url to metadata')
+				thumbnail_url = "plugin/UltimakerFormatPackage/thumbnail/" + uploaded_file.replace(".gcode", ".png") + "?" + "{:%Y%m%d%H%M%S}".format(datetime.datetime.now())
+				self._file_manager.set_additional_metadata("local", uploaded_file, "thumbnail", thumbnail_url, overwrite=True)
+				self._file_manager.set_additional_metadata("local", uploaded_file, "thumbnail_src", self._identifier, overwrite=True)
 
 			return octoprint.filemanager.util.DiskFileWrapper(path, ufp_filename)
 		return file_object
