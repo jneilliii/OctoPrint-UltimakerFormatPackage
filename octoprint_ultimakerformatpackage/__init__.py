@@ -123,6 +123,13 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 				import shutil
 				shutil.move(self.get_plugin_data_folder() + "/" + self._folderRemovalLastDeleted[key]["path"],
 							self.get_plugin_data_folder() + "/" + self._folderRemovalLastAdded[key]["path"])
+				file_list = self._file_manager.list_files(path= self._folderRemovalLastAdded[key]["path"], recursive=True)
+				local_files = file_list["local"]
+				results = dict(no_thumbnail=[], no_thumbnail_src=[])
+				for file_key, file in local_files.items():
+					results = self._process_gcode(local_files[file_key], results)
+				self._logger.debug("Scan results: {}".format(results))
+
 				self._folderRemovalLastAdded.pop(key)
 			else:
 				self._logger.debug("Folder deleted: {}".format(self._folderRemovalLastDeleted[key]["path"]))
@@ -132,6 +139,7 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 				self._folderRemovalLastDeleted.pop(key)
 
 		self._folder_removal_timer_stop()
+		self._event_bus.fire("UpdatedFiles", {"type": "printables"})
 
 	##~~ File Removal Timer
 
@@ -251,7 +259,6 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 
 	def on_api_command(self, command, data):
 		import flask
-		import json
 		from octoprint.server import user_permission
 		if not user_permission.can():
 			return flask.make_response("Insufficient rights", 403)
