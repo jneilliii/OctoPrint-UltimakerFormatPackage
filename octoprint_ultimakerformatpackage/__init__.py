@@ -14,12 +14,15 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 								   octoprint.plugin.AssetPlugin,
 								   octoprint.plugin.TemplatePlugin,
 								   octoprint.plugin.EventHandlerPlugin,
-								  octoprint.plugin.SimpleApiPlugin):
+								   octoprint.plugin.SimpleApiPlugin):
 
 	def __init__(self):
 		self._fileRemovalTimer = None
 		self._fileRemovalLastDeleted = {}
 		self._fileRemovalLastAdded = {}
+		self._folderRemovalTimer = None
+		self._folderRemovalLastDeleted = {}
+		self._folderRemovalLastAdded = {}
 		self._waitForAnalysis = False
 		self._analysis_active = False
 
@@ -32,9 +35,14 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			inline_thumbnail=False,
 			scale_inline_thumbnail=False,
 			inline_thumbnail_scale_value="50",
+			inline_thumbnail_position_left=False,
 			align_inline_thumbnail=False,
 			inline_thumbnail_align_value="left",
-			state_panel_thumbnail=True
+			state_panel_thumbnail=True,
+			state_panel_thumbnail_scale_value="100",
+			resize_filelist=False,
+			filelist_height="306",
+			scale_inline_thumbnail_position=False
 		)
 
 	##~~ AssetPlugin mixin
@@ -55,15 +63,21 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 	##~~ EventHandlerPlugin mixin
 
 	def on_event(self, event, payload):
-		if event not in ["FileAdded", "FileRemoved", "MetadataAnalysisStarted", "MetadataAnalysisFinished", "FolderRemoved"]:
+		if event not in ["FileAdded", "FileRemoved", "MetadataAnalysisStarted", "MetadataAnalysisFinished",
+						 "FolderRemoved", "FolderAdded"]:
 			return
 
 		if event == "FolderRemoved" and payload["storage"] == "local":
-			import shutil
-			shutil.rmtree(self.get_plugin_data_folder() + "/" + payload["path"], ignore_errors=True)
+			self._logger.debug("Folder removed %s" % payload["name"])
+			self._folderRemovalLastDeleted[payload["name"]] = payload
+			self._folder_removal_timer_start()
+		if event == "FolderAdded":
+			self._logger.debug("Folder added %s" % payload["name"])
+			self._folderRemovalLastAdded[payload["name"]] = payload
+
 		# Hack that deletes uploaded ufp file from upload path
 		if event == "FileAdded" and "ufp" in payload["type"]:
-			old_name = payload["path"] # self._settings.global_get_basefolder("uploads") + "/" +
+			old_name = payload["path"]  # self._settings.global_get_basefolder("uploads") + "/" +
 			ufp_file = self.get_plugin_data_folder() + "/" + payload["path"]
 			if os.path.exists(ufp_file):
 				os.remove(ufp_file)
@@ -84,6 +98,50 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			self._file_removal_timer_start()
 			return
 
+	##~~ Folder Removal Timer
+
+	def _folder_removal_timer_start(self):
+		if self._folderRemovalTimer is None:
+			self._logger.debug("Starting removal timer.")
+			self._folderRemovalTimer = RepeatedTimer(5, self._folder_removal_timer_task)
+			self._folderRemovalTimer.start()
+
+	def _folder_removal_timer_stop(self):
+		self._logger.debug("Cancelling timer and setting everything None.")
+		if self._folderRemovalTimer is not None:
+			self._folderRemovalTimer.cancel()
+			self._folderRemovalTimer = None
+
+	def _folder_removal_timer_task(self):
+		if self._waitForAnalysis:
+			return
+
+		for key in list(self._folderRemovalLastDeleted):
+			if self._folderRemovalLastAdded.get(key, False):
+				folder_src = self.get_plugin_data_folder() + "/" + self._folderRemovalLastDeleted[key]["path"]
+				folder_dest = self.get_plugin_data_folder() + "/" + self._folderRemovalLastAdded[key]["path"]
+				self._logger.debug("Folder moved from: {} to: {}".format(folder_src, folder_dest))
+				if os.path.exists(folder_src):
+					import shutil
+					shutil.move(folder_src, folder_dest)
+					file_list = self._file_manager.list_files(path= self._folderRemovalLastAdded[key]["path"], recursive=True)
+					local_files = file_list["local"]
+					results = dict(no_thumbnail=[], no_thumbnail_src=[])
+					for file_key, file in local_files.items():
+						results = self._process_gcode(local_files[file_key], results)
+					self._logger.debug("Scan results: {}".format(results))
+
+				self._folderRemovalLastAdded.pop(key)
+			else:
+				self._logger.debug("Folder deleted: {}".format(self._folderRemovalLastDeleted[key]["path"]))
+				import shutil
+				shutil.rmtree(self.get_plugin_data_folder() + "/" + self._folderRemovalLastDeleted[key]["path"],
+							  ignore_errors=True)
+				self._folderRemovalLastDeleted.pop(key)
+
+		self._folder_removal_timer_stop()
+		self._event_bus.fire("UpdatedFiles", {"type": "printables"})
+
 	##~~ File Removal Timer
 
 	def _file_removal_timer_start(self):
@@ -102,8 +160,10 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		if self._waitForAnalysis:
 			return
 		for key in list(self._fileRemovalLastDeleted):
-			thumbnail = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted[key]["path"].replace(".gcode", ".png"))
-			ufp_file = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted[key]["path"].replace(".gcode", ".ufp"))
+			thumbnail = "%s/%s" % (
+			self.get_plugin_data_folder(), self._fileRemovalLastDeleted[key]["path"].replace(".gcode", ".png"))
+			ufp_file = "%s/%s" % (
+			self.get_plugin_data_folder(), self._fileRemovalLastDeleted[key]["path"].replace(".gcode", ".ufp"))
 			gcode_file = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastDeleted[key]["path"])
 			# clean up double slashes
 			thumbnail = thumbnail.replace("//", "/")
@@ -111,7 +171,8 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 			gcode_file = gcode_file.replace("//", "/")
 			if self._fileRemovalLastAdded.get(key, False):
 				# copy thumbnail to new path and update metadata
-				thumbnail_new = "%s/%s" % (self.get_plugin_data_folder(), self._fileRemovalLastAdded[key]["path"].replace(".gcode", ".png"))
+				thumbnail_new = "%s/%s" % (
+				self.get_plugin_data_folder(), self._fileRemovalLastAdded[key]["path"].replace(".gcode", ".png"))
 				thumbnail_new = thumbnail_new.replace("//", "/")
 				thumbnail_new_path = os.path.dirname(thumbnail_new)
 				self._logger.debug(thumbnail)
@@ -121,13 +182,16 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 					os.makedirs(thumbnail_new_path)
 				if os.path.exists(thumbnail_new):
 					os.remove(thumbnail_new)
-				if thumbnail != thumbnail_new:
+				if thumbnail != thumbnail_new and os.path.exists(thumbnail):
 					os.rename(thumbnail, thumbnail_new)
 				if os.path.exists(thumbnail_new):
 					self._logger.debug("Updating thumbnail url.")
-					thumbnail_url = "plugin/UltimakerFormatPackage/thumbnail/" + self._fileRemovalLastAdded[key]["path"].replace(".gcode", ".png") + "?" + "{:%Y%m%d%H%M%S}".format(datetime.datetime.now())
-					self._file_manager.set_additional_metadata("local", self._fileRemovalLastAdded[key]["path"], "thumbnail", thumbnail_url, overwrite=True)
-					self._file_manager.set_additional_metadata("local", self._fileRemovalLastAdded[key]["path"], "thumbnail_src", self._identifier, overwrite=True)
+					thumbnail_url = "plugin/UltimakerFormatPackage/thumbnail/" + self._fileRemovalLastAdded[key][
+						"path"].replace(".gcode", ".png") + "?" + "{:%Y%m%d%H%M%S}".format(datetime.datetime.now())
+					self._file_manager.set_additional_metadata("local", self._fileRemovalLastAdded[key]["path"],
+															   "thumbnail", thumbnail_url, overwrite=True)
+					self._file_manager.set_additional_metadata("local", self._fileRemovalLastAdded[key]["path"],
+															   "thumbnail_src", self._identifier, overwrite=True)
 
 				self._fileRemovalLastAdded.pop(key)
 
@@ -166,15 +230,24 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		self._logger.debug(gcode_file["path"])
 		if gcode_file.get("type") == "machinecode":
 			self._logger.debug(gcode_file.get("thumbnail"))
-			if gcode_file.get("thumbnail_src", False):
-				return results
-			if gcode_file.get("refs", False) and gcode_file["refs"].get("thumbnail", False):
-				results["no_thumbnail_src"].append(gcode_file["path"])
-				self._logger.debug("Setting metadata for %s" % gcode_file["path"])
-				self._file_manager.set_additional_metadata("local", gcode_file["path"], "thumbnail", gcode_file["refs"].get("thumbnail").replace("/plugin/UltimakerFormatPackage", "plugin/UltimakerFormatPackage"), overwrite=True)
-				self._file_manager.remove_additional_metadata("local", gcode_file["path"], "refs")
-				self._file_manager.set_additional_metadata("local", gcode_file["path"], "thumbnail_src", self._identifier, overwrite=True)
-		elif gcode_file.get("type") == "folder" and not gcode_file.get("children") == None:
+			if gcode_file.get("path", False):
+				png_path = gcode_file["path"].replace(".gcode", ".png")
+				full_path = self.get_plugin_data_folder() + "/" + png_path
+				self._logger.debug("Checking if {} exists".format(full_path))
+				if os.path.exists(full_path):
+					results["no_thumbnail_src"].append(gcode_file["path"])
+					self._logger.debug("Setting metadata for %s" % gcode_file["path"])
+					thumbnail_url = "plugin/UltimakerFormatPackage/thumbnail/{}?{:%Y%m%d%H%M%S}".format(png_path, datetime.datetime.now()).replace("//", "/")
+					self._file_manager.set_additional_metadata("local", gcode_file["path"], "thumbnail", thumbnail_url, overwrite=True)
+					self._file_manager.set_additional_metadata("local", gcode_file["path"], "thumbnail_src", self._identifier, overwrite=True)
+				elif gcode_file.get("thumbnail_src") == self._identifier:
+					results["no_thumbnail"].append(gcode_file["path"])
+					self._logger.debug("Removing metadata for %s" % gcode_file["path"])
+					self._file_manager.remove_additional_metadata("local", gcode_file["path"], "thumbnail_src")
+					self._file_manager.remove_additional_metadata("local", gcode_file["path"], "thumbnail")
+				else:
+					results["no_thumbnail"].append(gcode_file["path"])
+		elif gcode_file.get("type") == "folder" and not gcode_file.get("children") is None:
 			children = gcode_file["children"]
 			for key, file in children.items():
 				self._process_gcode(children[key], results)
@@ -185,14 +258,13 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 
 	def on_api_command(self, command, data):
 		import flask
-		import json
 		from octoprint.server import user_permission
 		if not user_permission.can():
 			return flask.make_response("Insufficient rights", 403)
 
 		if command == "crawl_files":
 			self._logger.debug("Crawling Files")
-			file_list = self._file_manager.list_files()
+			file_list = self._file_manager.list_files(recursive=True)
 			local_files = file_list["local"]
 			results = dict(no_thumbnail=[], no_thumbnail_src=[])
 			for key, file in local_files.items():
@@ -230,14 +302,20 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 				with open(gco_filename, 'wb') as f:
 					f.write(zipObj.read("/3D/model.gcode"))
 
-			file_wrapper = octoprint.filemanager.util.DiskFileWrapper(path.replace(".ufp", ".gcode"), gco_filename, move=True)
-			uploaded_file = self._file_manager.add_file("local", file_wrapper.filename, file_wrapper, allow_overwrite=True)
+			file_wrapper = octoprint.filemanager.util.DiskFileWrapper(path.replace(".ufp", ".gcode"), gco_filename,
+																	  move=True)
+			uploaded_file = self._file_manager.add_file("local", file_wrapper.filename, file_wrapper,
+														allow_overwrite=True)
 
 			if png_filename:
 				self._logger.debug('Adding thumbnail url to metadata')
-				thumbnail_url = "plugin/UltimakerFormatPackage/thumbnail/" + uploaded_file.replace(".gcode", ".png") + "?" + "{:%Y%m%d%H%M%S}".format(datetime.datetime.now())
-				self._file_manager.set_additional_metadata("local", uploaded_file, "thumbnail", thumbnail_url, overwrite=True)
-				self._file_manager.set_additional_metadata("local", uploaded_file, "thumbnail_src", self._identifier, overwrite=True)
+				thumbnail_url = "plugin/UltimakerFormatPackage/thumbnail/" + uploaded_file.replace(".gcode",
+																								   ".png") + "?" + "{:%Y%m%d%H%M%S}".format(
+					datetime.datetime.now())
+				self._file_manager.set_additional_metadata("local", uploaded_file, "thumbnail", thumbnail_url,
+														   overwrite=True)
+				self._file_manager.set_additional_metadata("local", uploaded_file, "thumbnail_src", self._identifier,
+														   overwrite=True)
 
 			return octoprint.filemanager.util.DiskFileWrapper(path, ufp_filename)
 		return file_object
@@ -247,10 +325,11 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		from octoprint.server.util.tornado import LargeResponseHandler, UrlProxyHandler, path_validation_factory
 		from octoprint.util import is_hidden_path
 		return [
-				(r"thumbnail/(.*)", LargeResponseHandler, dict(path=self.get_plugin_data_folder(),
-																as_attachment=False,
-																path_validation=path_validation_factory(lambda path: not is_hidden_path(path), status_code=404)))
-				]
+			(r"thumbnail/(.*)", LargeResponseHandler, dict(path=self.get_plugin_data_folder(),
+														   as_attachment=False,
+														   path_validation=path_validation_factory(
+															   lambda path: not is_hidden_path(path), status_code=404)))
+		]
 
 	def additional_excludes_hook(self, excludes, *args, **kwargs):
 		if "uploads" in excludes:
@@ -270,16 +349,16 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 				user="jneilliii",
 				repo="OctoPrint-UltimakerFormatPackage",
 				current=self._plugin_version,
-                stable_branch=dict(
-                    name="Stable", branch="master", comittish=["master"]
-                ),
-                prerelease_branches=[
-                    dict(
-                        name="Release Candidate",
-                        branch="rc",
-                        comittish=["rc", "master"],
-                    )
-                ],
+				stable_branch=dict(
+					name="Stable", branch="master", comittish=["master"]
+				),
+				prerelease_branches=[
+					dict(
+						name="Release Candidate",
+						branch="rc",
+						comittish=["rc", "master"],
+					)
+				],
 
 				# update method: pip
 				pip="https://github.com/jneilliii/OctoPrint-UltimakerFormatPackage/archive/{target_version}.zip"
@@ -303,4 +382,3 @@ def __plugin_load__():
 		"octoprint.server.http.routes": __plugin_implementation__.route_hook,
 		"octoprint.plugin.backup.additional_excludes": __plugin_implementation__.additional_excludes_hook
 	}
-
