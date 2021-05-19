@@ -3,7 +3,7 @@
 plugin_identifier = "UltimakerFormatPackage"
 plugin_package = "octoprint_ultimakerformatpackage"
 plugin_name = "OctoPrint-UltimakerFormatPackage"
-plugin_version = "1.0.0rc1"
+plugin_version = "1.0.0"
 plugin_description = """Plugin that allows the upload of Cura exported ufp file format."""
 plugin_author = "jneilliii"
 plugin_author_email = "jneilliii+github@gmail.com"
