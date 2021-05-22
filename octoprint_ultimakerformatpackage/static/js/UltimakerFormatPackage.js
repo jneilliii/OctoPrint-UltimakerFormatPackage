@@ -18,8 +18,8 @@ $(function() {
 		self.filesViewModel = parameters[1];
 
 		self.filesViewModel.UltimakerFormatPackage_open_thumbnail = function(data) {
-			if(data.name.indexOf('.gcode') > 0){
-				var thumbnail_title = data.path.replace('.gcode','');
+			if(data.thumbnail_src === "UltimakerFormatPackage"){
+				var thumbnail_title = data.path.replace(/\.(?:gco(?:de)?)$/,'');
 				var thumbnail_url = ((data.thumbnail) ? data.thumbnail : 'plugin/UltimakerFormatPackage/thumbnail/' + data.path.replace('.ufp.gcode','.png'));
 				self.thumbnail_url(thumbnail_url);
 				self.thumbnail_title(thumbnail_title);
