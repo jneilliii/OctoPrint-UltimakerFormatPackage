@@ -132,7 +132,7 @@ $(function() {
 					console.log(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail() && (data.thumbnail || data.name.indexOf('.ufp.gcode') > 0) && (data.thumbnail_src === 'UltimakerFormatPackage' || data.name.indexOf('.ufp.gcode') > 0));
 					if(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail() && (data.thumbnail || data.name.indexOf('.ufp.gcode') > 0) && (data.thumbnail_src === 'UltimakerFormatPackage' || data.name.indexOf('.ufp.gcode') > 0)){
 						if($('#UFP_state_thumbnail').length){
-							$('#UFP_state_thumbnail > img').attr('src', data.thumbnail);
+							$('#UFP_state_thumbnail').attr('src', data.thumbnail);
 						} else {
 						    $('#state > div > hr:first').after('<img id="UFP_state_thumbnail" class="pull-left" src="'+data.thumbnail+'" width="' + self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail_scale_value() + '%"/>');
 						}
