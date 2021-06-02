@@ -18,21 +18,21 @@ $(function() {
 		self.filesViewModel = parameters[1];
 
 		self.filesViewModel.UltimakerFormatPackage_open_thumbnail = function(data) {
-			if(data.name.indexOf('.gcode') > 0){
-				var thumbnail_title = data.path.replace('.gcode','');
+			if(data.thumbnail_src === "UltimakerFormatPackage"){
+				var thumbnail_title = data.path.replace(/\.(?:gco(?:de)?)$/,'');
 				var thumbnail_url = ((data.thumbnail) ? data.thumbnail : 'plugin/UltimakerFormatPackage/thumbnail/' + data.path.replace('.ufp.gcode','.png'));
 				self.thumbnail_url(thumbnail_url);
 				self.thumbnail_title(thumbnail_title);
 				self.file_details(data);
 				$('div#UltimakerFormatPackage_thumbnail_viewer').modal("show");
 			}
-		}
+		};
 
-		self.DEFAULT_THUMBNAIL_SCALE = "100%"
-		self.filesViewModel.UFPthumbnailScaleValue = ko.observable(self.DEFAULT_THUMBNAIL_SCALE)
+		self.DEFAULT_THUMBNAIL_SCALE = "100%";
+		self.filesViewModel.UFPthumbnailScaleValue = ko.observable(self.DEFAULT_THUMBNAIL_SCALE);
 
-		self.DEFAULT_THUMBNAIL_ALIGN = "left"
-		self.filesViewModel.UFPthumbnailAlignValue = ko.observable(self.DEFAULT_THUMBNAIL_ALIGN)
+		self.DEFAULT_THUMBNAIL_ALIGN = "left";
+		self.filesViewModel.UFPthumbnailAlignValue = ko.observable(self.DEFAULT_THUMBNAIL_ALIGN);
 
         self.DEFAULT_THUMBNAIL_POSITION = false;
 		self.filesViewModel.UFPthumbnailPositionLeft = ko.observable(self.DEFAULT_THUMBNAIL_POSITION);
@@ -56,15 +56,15 @@ $(function() {
 				}
 
 				console.log(data);
-				if(self.crawl_results().length == 0){
+				if(self.crawl_results().length === 0){
 					self.crawl_results.push({name: ko.observable('No convertible files found'), files: ko.observableArray([])});
 				}
 				self.filesViewModel.requestData({force: true});
 				self.crawling_files(false);
 			}).fail(function(data){
 				self.crawling_files(false);
-			})
-		}
+			});
+		};
 
 		self.onBeforeBinding = function() {
 			// assign initial scaling
@@ -99,7 +99,7 @@ $(function() {
 				self.filesViewModel.UFPthumbnailScaleValue(newValue + "%");
 			});
 			self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail_scale_value.subscribe(function(newValue){
-				$('#UFP_state_thumbnail').attr({'width': self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail_scale_value() + '%'})
+				$('#UFP_state_thumbnail').attr({'width': self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail_scale_value() + '%'});
 			});
 
 			// observe alignment changes
@@ -129,10 +129,10 @@ $(function() {
 			self.filesViewModel.listHelper.selectedItem.subscribe(function(data){
 				// remove the state panel thumbnail in case it's already there
 				if(data){
-					console.log(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail() && (data.thumbnail || data.name.indexOf('.ufp.gcode') > 0) && (data.thumbnail_src == 'UltimakerFormatPackage' || data.name.indexOf('.ufp.gcode') > 0));
-					if(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail() && (data.thumbnail || data.name.indexOf('.ufp.gcode') > 0) && (data.thumbnail_src == 'UltimakerFormatPackage' || data.name.indexOf('.ufp.gcode') > 0)){
+					console.log(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail() && (data.thumbnail || data.name.indexOf('.ufp.gcode') > 0) && (data.thumbnail_src === 'UltimakerFormatPackage' || data.name.indexOf('.ufp.gcode') > 0));
+					if(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail() && (data.thumbnail || data.name.indexOf('.ufp.gcode') > 0) && (data.thumbnail_src === 'UltimakerFormatPackage' || data.name.indexOf('.ufp.gcode') > 0)){
 						if($('#UFP_state_thumbnail').length){
-							$('#UFP_state_thumbnail > img').attr('src', data.thumbnail);
+							$('#UFP_state_thumbnail').attr('src', data.thumbnail);
 						} else {
 						    $('#state > div > hr:first').after('<img id="UFP_state_thumbnail" class="pull-left" src="'+data.thumbnail+'" width="' + self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail_scale_value() + '%"/>');
 						}
@@ -143,7 +143,7 @@ $(function() {
 					$('#UFP_state_thumbnail').remove();
 				}
 			});
-		}
+		};
 
 		$(document).ready(function(){
 			let regex = /<div class="btn-group action-buttons">([\s\S]*)<.div>/mi;
@@ -154,12 +154,12 @@ $(function() {
 			                                'visible: $data.thumbnail_src == \'UltimakerFormatPackage\' && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true, ' +
 			                                'click: function() { if ($root.loginState.isUser()) { $root.UltimakerFormatPackage_open_thumbnail($data) } else { return; } },' +
                                             'style: {\'width\': (!$root.UFPthumbnailPositionLeft()) ? $root.UFPthumbnailScaleValue() : \'100%\' }" ' +
-			                                'style="display: none;"/></div>'
+			                                'style="display: none;"/></div>';
 
 			$("#files_template_machinecode").text(function () {
 				var return_value = inline_thumbnail_template + $(this).text();
 				return_value = return_value.replace(regex, '<div class="btn-group action-buttons">$1	' + template + '></div>');
-				return return_value
+				return return_value;
 			});
 		});
 	}
