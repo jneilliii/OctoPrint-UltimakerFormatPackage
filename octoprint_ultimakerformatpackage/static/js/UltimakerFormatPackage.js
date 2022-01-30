@@ -149,6 +149,10 @@ $(function() {
 							$('#UFP_state_thumbnail').attr('src', self.filesViewModel.UltimakerFormatPackageThumbnailSrc(data));
 						} else {
 						    $('#state > div > hr:first').after('<img id="UFP_state_thumbnail" class="pull-left" src="'+self.filesViewModel.UltimakerFormatPackageThumbnailSrc(data)+'" width="' + self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail_scale_value() + '%"/>');
+                            if(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail_add_break()){
+                                $('#UFP_state_thumbnail').removeClass('pull-left');
+                                $('#UFP_state_thumbnail').after('<br>');
+                            }
 						}
 					} else {
 						$('#UFP_state_thumbnail').remove();
