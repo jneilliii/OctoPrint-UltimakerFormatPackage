@@ -17,10 +17,24 @@ $(function() {
 		self.settingsViewModel = parameters[0];
 		self.filesViewModel = parameters[1];
 
+        self.filesViewModel.UltimakerFormatPackageThumbnailSrc = function(data) {
+            let temp = data.thumbnail;
+            let new_path = [];
+            let path = temp.split('/');
+            for(let i=0;i<path.length;i++){
+                let temp_length = path[i].lastIndexOf('?');
+                if(temp_length > 0){
+                    new_path.push(encodeURIComponent(path[i].substr(0, temp_length)) + path[i].substr(temp_length));
+                } else {
+                    new_path.push(encodeURIComponent(path[i]));
+                }
+            }
+            return new_path.join('/');
+        };
 		self.filesViewModel.UltimakerFormatPackage_open_thumbnail = function(data) {
 			if(data.thumbnail_src === "UltimakerFormatPackage"){
 				var thumbnail_title = data.path.replace(/\.(?:gco(?:de)?)$/,'');
-				var thumbnail_url = ((data.thumbnail) ? data.thumbnail : 'plugin/UltimakerFormatPackage/thumbnail/' + data.path.replace('.ufp.gcode','.png'));
+				var thumbnail_url = self.filesViewModel.UltimakerFormatPackageThumbnailSrc(data);
 				self.thumbnail_url(thumbnail_url);
 				self.thumbnail_title(thumbnail_title);
 				self.file_details(data);
@@ -129,12 +143,16 @@ $(function() {
 			self.filesViewModel.listHelper.selectedItem.subscribe(function(data){
 				// remove the state panel thumbnail in case it's already there
 				if(data){
-					console.log(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail() && (data.thumbnail || data.name.indexOf('.ufp.gcode') > 0) && (data.thumbnail_src === 'UltimakerFormatPackage' || data.name.indexOf('.ufp.gcode') > 0));
+					// console.log(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail() && (data.thumbnail || data.name.indexOf('.ufp.gcode') > 0) && (data.thumbnail_src === 'UltimakerFormatPackage' || data.name.indexOf('.ufp.gcode') > 0));
 					if(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail() && (data.thumbnail || data.name.indexOf('.ufp.gcode') > 0) && (data.thumbnail_src === 'UltimakerFormatPackage' || data.name.indexOf('.ufp.gcode') > 0)){
 						if($('#UFP_state_thumbnail').length){
-							$('#UFP_state_thumbnail').attr('src', data.thumbnail);
+							$('#UFP_state_thumbnail').attr('src', self.filesViewModel.UltimakerFormatPackageThumbnailSrc(data));
 						} else {
-						    $('#state > div > hr:first').after('<img id="UFP_state_thumbnail" class="pull-left" src="'+data.thumbnail+'" width="' + self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail_scale_value() + '%"/>');
+						    $('#state > div > hr:first').after('<img id="UFP_state_thumbnail" class="pull-left" src="'+self.filesViewModel.UltimakerFormatPackageThumbnailSrc(data)+'" width="' + self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail_scale_value() + '%"/>');
+                            if(self.settingsViewModel.settings.plugins.UltimakerFormatPackage.state_panel_thumbnail_add_break()){
+                                $('#UFP_state_thumbnail').removeClass('pull-left');
+                                $('#UFP_state_thumbnail').after('<br>');
+                            }
 						}
 					} else {
 						$('#UFP_state_thumbnail').remove();
@@ -150,7 +168,7 @@ $(function() {
 			let template = '<div class="btn btn-mini" data-bind="click: function() { if ($root.loginState.isUser()) { $root.UltimakerFormatPackage_open_thumbnail($data) } else { return; } }, visible: $data.thumbnail_src == \'UltimakerFormatPackage\' && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == false" title="Show Thumbnail" style="display: none;"><i class="fa fa-image"></i></div>';
 			let inline_thumbnail_template = '<div class="inline_thumbnail" ' +
 			                                'data-bind="if: $data.thumbnail_src == \'UltimakerFormatPackage\' && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true, style: {\'text-align\': $root.UFPthumbnailAlignValue, \'width\': ($root.UFPthumbnailPositionLeft()) ? $root.UFPthumbnailScaleValue() : \'100%\'}, css: {\'row-fluid\': !$root.UFPthumbnailPositionLeft(), \'pull-left\': $root.UFPthumbnailPositionLeft()}">' +
-			                                '<img data-bind="attr: {src: $data.thumbnail, width: $root.UFPthumbnailScaleValue}, ' +
+			                                '<img data-bind="attr: {src: $root.UltimakerFormatPackageThumbnailSrc($data), width: $root.UFPthumbnailScaleValue}, ' +
 			                                'visible: $data.thumbnail_src == \'UltimakerFormatPackage\' && $root.settingsViewModel.settings.plugins.UltimakerFormatPackage.inline_thumbnail() == true, ' +
 			                                'click: function() { if ($root.loginState.isUser()) { $root.UltimakerFormatPackage_open_thumbnail($data) } else { return; } },' +
                                             'style: {\'width\': (!$root.UFPthumbnailPositionLeft()) ? $root.UFPthumbnailScaleValue() : \'100%\' }" ' +
