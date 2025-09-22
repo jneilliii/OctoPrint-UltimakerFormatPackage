@@ -8,6 +8,7 @@ from zipfile import ZipFile
 
 import octoprint.filemanager.util
 import octoprint.plugin
+from octoprint.access.permissions import Permissions
 from octoprint.util import RepeatedTimer
 
 
@@ -316,12 +317,35 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 
 	##~~ Routes hook
 	def route_hook(self, server_routes, *args, **kwargs):
-		from octoprint.server.util.tornado import LargeResponseHandler, path_validation_factory
+		from octoprint.server import app
+		from octoprint.server.util.flask import (
+			permission_validator,
+		)
+		from octoprint.server.util.tornado import (
+			LargeResponseHandler,
+			access_validation_factory,
+			path_validation_factory,
+		)
 		from octoprint.util import is_hidden_path
+
 		return [
-			(r"thumbnail/(.*)", LargeResponseHandler,
-			 {'path': self.get_plugin_data_folder(), 'as_attachment': False, 'path_validation': path_validation_factory(
-				 lambda path: not is_hidden_path(path), status_code=404)})
+			(
+				"thumbnail/(.*)",
+				LargeResponseHandler,
+				{
+					'path': self.get_plugin_data_folder(),
+					'as_attachment': False,
+					'path_validation': path_validation_factory(
+						lambda path: not is_hidden_path(path),
+						status_code=404
+					),
+					"access_validation": access_validation_factory(
+						app,
+						permission_validator,
+						Permissions.FILES_LIST,
+					)
+				}
+			)
 		]
 
 	def additional_excludes_hook(self, excludes, *args, **kwargs):
