@@ -10,6 +10,7 @@ import octoprint.filemanager.util
 import octoprint.plugin
 from octoprint.access.permissions import Permissions
 from octoprint.util import RepeatedTimer
+import flask
 
 
 class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
@@ -45,6 +46,9 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		return {'js': ["js/UltimakerFormatPackage.js"], 'css': ["css/UltimakerFormatPackage.css"]}
 
 	##~~ TemplatePlugin mixin
+
+	def is_template_autoescaped(self):
+		return True
 
 	def get_template_configs(self):
 		return [
@@ -221,6 +225,9 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 
 	##~~ SimpleApiPlugin mixin
 
+	def is_api_protected(self):
+		return True
+
 	def _process_gcode(self, gcode_file, results=[]):
 		self._logger.debug(gcode_file["path"])
 		if gcode_file.get("type") == "machinecode":
@@ -256,9 +263,7 @@ class UltimakerFormatPackagePlugin(octoprint.plugin.SettingsPlugin,
 		return {'crawl_files': []}
 
 	def on_api_command(self, command, data):
-		import flask
-		from octoprint.server import user_permission
-		if not user_permission.can():
+		if not Permissions.FILES_LIST.can():
 			return flask.make_response("Insufficient rights", 403)
 
 		if command == "crawl_files":

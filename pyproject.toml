@@ -1,0 +1,42 @@
+[build-system]
+requires = [
+    "setuptools>=68",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "OctoPrint-UltimakerFormatPackage"
+version = "1.2.0"
+description = "Plugin that allows the upload of Cura exported ufp file format."
+authors = [
+    { name = "jneilliii", email = "jneilliii+github@gmail.com" },
+]
+requires-python = ">=3.7,<4"
+dependencies = []
+dynamic = [
+    "license",
+]
+
+[project.entry-points."octoprint.plugin"]
+UltimakerFormatPackage = "octoprint_ultimakerformatpackage"
+
+[project.urls]
+Homepage = "https://github.com/jneilliii/OctoPrint-UltimakerFormatPackage"
+
+[project.optional-dependencies]
+develop = [
+    "go-task-bin",
+]
+
+[project.readme]
+file = "README.md"
+content-type = "text/markdown"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = [
+    "octoprint_ultimakerformatpackage",
+    "octoprint_ultimakerformatpackage.*",
+]
